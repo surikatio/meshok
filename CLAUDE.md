@@ -6,59 +6,85 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Desktop automation tool for posting auction lots on [meshok.net](https://meshok.net) via their REST API. The user fills in lot parameters, selects image URLs from an Excel file, and the app posts one lot per image with a configurable delay between them.
 
-**Migration complete**: tkinter → [Flet](https://flet.dev). Entry point is `main.py`.
+Entry point is `main.py`. All settings (accounts, delivery prices, Excel filename) are configured inside the app UI — no config file needed.
 
 ## Running the App
 
 ```powershell
-# New Flet app (Sprint 1):
 python main.py
-
-# Legacy tkinter app (reference only):
-python main.pyz
 
 # Install dependencies
 pip install requests openpyxl flet
+
+# Run tests
+python -m pytest tests/ -v
+
+# Build standalone exe (no Flutter required)
+.venv\Scripts\flet pack main.py --name "Avto-lot" --icon icon.ico --product-name "Авто-лот" --distpath dist
 ```
+
 после завершения запуска закрывать программу
 
-The app must be launched from its own directory — it uses relative paths for `шаблоны/`, `история/`, `icon.ico`, and the Excel file.
+All data paths (`шаблоны/`, `история/`, `settings.json`, `log.txt`, Excel file) are resolved relative to the exe directory (when frozen) or project root (when running from source) via `core/paths.py`.
 
-## Project Structure (post Sprint 1)
+## Project Structure
 
 ```
-main.py                  # Flet entry point
+main.py                  # Flet entry point, logging setup
 core/
+    paths.py             # get_app_dir() — resolves base dir for exe vs source
+    settings.py          # AppSettings dataclass, save/load to settings.json
     templates.py         # LotData dataclass + CRUD for шаблоны/
     excel_loader.py      # load_url_list() — non-blocking Excel read
     validator.py         # validate_lot_data() → list[str] of errors
     history.py           # save_history() → история/
     api.py               # make_lot() — POST to meshok.net API
+    meshok_api.py        # MeshokAPI class (vendored from meshokteam/sAPI-py)
 ui/
     lot_form.py          # LotFormView — main form screen
-    progress_view.py     # ProgressView — posting loop + live log
+    progress_view.py     # ProgressView — posting loop + live log + stop button
+    settings_view.py     # SettingsView — accounts, Excel file, delivery prices
     template_dialog.py   # show_save_template_dialog()
-auto_lot_сonfig.py       # config (note: кириллическая 'с' in filename — intentional)
+tests/
+    conftest.py          # app_dirs fixture: patches module-level path constants
+    test_api.py
+    test_excel_loader.py
+    test_history.py
+    test_settings.py
+    test_templates.py
+    test_validator.py
+dist/
+    Avto-lot.exe         # built exe (not in git)
 main.pyz                 # legacy tkinter app, kept for reference
 ```
 
 ## Architecture
 
-**Single-file app** (`main.pyz`) with a flat structure:
-
 | Layer | What it does |
 |---|---|
-| Startup | Loads Excel → builds `url_list` of image URLs |
-| UI (`start()`) | Renders the form, loads last template, wires menu |
-| Validation (`clicked_save()`) | Validates all fields before posting |
-| API (`make_lot()`) | POSTs to `https://api.meshok.net/sAPIv1/listItem` |
-| Loop | Iterates `url_list`, calls `make_lot()` once per image with `sleep_time` delay |
+| Startup | `load_settings()` → passes `AppSettings` through all views |
+| UI (LotFormView) | Form fields, template menu, settings gear, Excel status + refresh |
+| Settings (SettingsView) | Add/delete accounts (name→token), Excel filename, delivery prices |
+| Validation | `validate_lot_data()` checks all fields before posting |
+| API (`make_lot()`) | `MeshokAPI(token).listItem(params)` → POST to meshok |
+| Loop (ProgressView) | Iterates url_list, posts one lot per row, stop button, ok/err counter |
 
-**Config** (`auto_lot_config.py`):
-- `accounts` — dict of display name → Bearer token
-- `table_name` — Excel filename with image URLs (column A)
-- `prolong` — auto-renewal count on failed auction
-- `localDeliveryPrice`, `countryDeliveryPrice`, `worldDeliveryPrice`
+## Settings
+
+Stored in `settings.json` (next to exe, excluded from git — contains Bearer tokens):
+
+```json
+{
+  "accounts": {"Имя": "bearer_token"},
+  "table_name": "ссылки на картинки.xlsx",
+  "prolong": "0",
+  "local_delivery_price": "100",
+  "country_delivery_price": "100",
+  "world_delivery_price": "500"
+}
+```
+
+Account selection: user picks a name in the form dropdown → `accounts[name]` → Bearer token for API.
 
 ## Template Format
 
@@ -68,45 +94,49 @@ Templates are stored as single-line `;`-separated `.txt` files in `шаблон�
 name;category_id;tags;description;price;date;sleep_time;longevity[;autoprod[;account]]
 ```
 
-- `date`: `YYYY-MM-DD HH:MM:SS` or `0` for "now"
+- `date`: `YYYY-MM-DD HH:MM:SS` or `0` for "now" (replaced with `datetime.now()` at run time)
 - `longevity`: one of `3, 5, 7, 10, 14, 21` (days)
 - `autoprod`: `0`=N, `1`=Y (maps to meshok `antisniper` param)
-- `account`: display name key from `accounts` dict
-- `шаблоны/last.txt` — auto-saved on every run (used as default on next launch)
+- `account`: display name key from settings accounts dict
+- `шаблоны/last.txt` — auto-saved on every run, loaded as default on next launch
 
-History saves to `история/{name}-{timestamp}.txt` on each run.
+History saves to `история/{name}-{timestamp}.txt` on each run (before posting starts).
 
 ## meshok.net API
 
+- Library: `core/meshok_api.py` — vendored from [meshokteam/sAPI-py](https://github.com/meshokteam/sAPI-py)
 - Endpoint: `POST https://api.meshok.net/sAPIv1/listItem`
-- Auth: `Authorization: Bearer {token}` (token = account value from config)
+- Auth: `Authorization: Bearer {token}`
 - Hardcoded params: `city=58`, `saleType=Auction`, `delivery=WORLD`, `payment=BANK,CARD,PAYPAL`, `condition=NA`
-- `pictures` param takes comma-separated URLs — multiple images per lot supported
-- Excel format: one row = one lot, each column = one image URL; empty cells ignored
-- Error code `-2` in response means the image URL was rejected (hotlinking blocked on postimg.cc)
+- `pictures` — comma-separated URLs; one Excel row = one lot, each column = one photo
+- Tags: spaces stripped around commas only, not inside tag words
+- Error code `-2` in response = image URL rejected (hotlinking blocked)
 
-## Known Issues to Fix
+## Posting Loop (ProgressView)
 
-1. **Image error -2** — postimg.cc blocks hotlinking; need alternative image hosting or direct upload (not fixed in Sprint 1)
-2. ~~Template menu hardcoded to 20 items~~ — **fixed**: `list_templates()` is fully dynamic
-3. ~~`stdout` redirected to `log.txt`~~ — **fixed**: uses `logging` module, no stdout redirect
-4. ~~`exit(0)` after posting~~ — **fixed**: `ProgressView` navigates back to form on completion
-5. ~~Excel loaded at module level~~ — **fixed**: `load_url_list()` called in background thread
+- First lot posted at the time specified in the form; each subsequent lot shifted by `sleep_time` seconds
+- Sleep of `sleep_sec` seconds between lots (after posting, not before first)
+- Stop button sets `self._stop = True`, loop exits after current lot finishes
+- Final message shows count of successful vs failed lots
 
-## Flet Migration Notes
+## Logging
 
-When migrating to Flet:
-- Replace `tkinter.Tk()` → `ft.app(target=main)`
-- Replace `Entry/Label/Button` → `ft.TextField/ft.Text/ft.ElevatedButton`
-- Replace `Combobox` → `ft.Dropdown`
-- Replace `Progressbar` → `ft.ProgressBar`
-- Replace `messagebox` → `ft.AlertDialog`
-- The posting loop blocks the UI thread — wrap in `asyncio` or run in a thread with `page.update()` calls
-- `pyperclip` paste buttons can be replaced with Flet's built-in clipboard access
+- Written to `log.txt` next to exe (and to stderr when running from source)
+- Configured in `main.py` with both `FileHandler` and `StreamHandler`
+
+## Known Issues
+
+- **Image error -2** — postimg.cc blocks hotlinking; need alternative image hosting or direct upload
+
+## Flet Version Notes
+
+- Flet 0.85.2 — use `ft.run()` not deprecated `ft.app()`
+- `FilePicker` in this version cannot be passed `on_result` in constructor — set as attribute after construction (currently not used)
+- Do not call `page.update()` inside `View.__init__()` before the view is appended to `page.views`
+- All background thread UI updates via `self._pg.update()` are safe after mounting
 
 ## Allowed Tools
 - Bash(gh:*)
 - Bash(gh issue:*)
 - Bash(gh pr:*)
 - Bash(gh repo:*)
-
