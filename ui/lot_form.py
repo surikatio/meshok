@@ -131,7 +131,7 @@ class LotFormView(ft.View):
         ])
         self._pg.update()
 
-    def _fill_form(self, data: LotData):
+    def _fill_form(self, data: LotData, update: bool = True):
         self.f_name.value = data.name
         self.f_category.value = data.category
         self.f_tags.value = data.tags
@@ -143,7 +143,8 @@ class LotFormView(ft.View):
         self.f_autoprod.value = data.autoprod == "1"
         if data.account and data.account in self.settings.accounts:
             self.f_account.value = data.account
-        self._pg.update()
+        if update:
+            self._pg.update()
 
     def _collect_data(self) -> LotData:
         date_val = self.f_date.value.strip() if self.f_date.value else "0"
@@ -199,7 +200,6 @@ class LotFormView(ft.View):
     def _load_excel_async(self):
         self.excel_status.value = "Загрузка..."
         self.excel_status.color = ft.Colors.GREY_500
-        self._pg.update()
 
         def load():
             self.url_list = load_url_list(self.settings.table_name)
@@ -217,4 +217,4 @@ class LotFormView(ft.View):
     def _load_last_template(self):
         data = load_template("last")
         if data:
-            self._fill_form(data)
+            self._fill_form(data, update=False)
