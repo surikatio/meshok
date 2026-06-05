@@ -1,8 +1,9 @@
 import os
 from datetime import datetime
 from core.templates import LotData
+from core.paths import get_app_dir
 
-HISTORY_DIR = "история"
+HISTORY_DIR = os.path.join(get_app_dir(), "история")
 
 
 def save_history(data: LotData) -> str:

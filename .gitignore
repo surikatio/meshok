@@ -25,3 +25,8 @@ main.pyz
 
 # Windows shortcuts
 *.url
+
+# Build artifacts
+dist/
+build/
+*.spec

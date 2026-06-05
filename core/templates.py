@@ -1,10 +1,11 @@
 import os
 import logging
 from dataclasses import dataclass, field
+from core.paths import get_app_dir
 
 logger = logging.getLogger(__name__)
 
-TEMPLATES_DIR = "шаблоны"
+TEMPLATES_DIR = os.path.join(get_app_dir(), "шаблоны")
 
 
 @dataclass

@@ -1,10 +1,12 @@
 import json
 import logging
+import os
 from dataclasses import dataclass, field, asdict
+from core.paths import get_app_dir
 
 logger = logging.getLogger(__name__)
 
-SETTINGS_FILE = "settings.json"
+SETTINGS_FILE = os.path.join(get_app_dir(), "settings.json")
 
 
 @dataclass

@@ -1,10 +1,14 @@
 import logging
+import os
 import openpyxl as excel
+from core.paths import get_app_dir
 
 logger = logging.getLogger(__name__)
 
 
 def load_url_list(table_name: str) -> list[list[str]]:
+    if not os.path.isabs(table_name):
+        table_name = os.path.join(get_app_dir(), table_name)
     """Возвращает список строк; каждая строка — список URL из всех непустых ячеек.
     Одна строка Excel = один лот, несколько колонок = несколько фото в лоте."""
     try:

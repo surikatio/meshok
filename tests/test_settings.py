@@ -10,8 +10,7 @@ def test_defaults():
     assert s.prolong == "0"
 
 
-def test_save_and_load_roundtrip(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_save_and_load_roundtrip(app_dirs):
     s = AppSettings(
         accounts={"Вася": "token1", "Петя": "token2"},
         table_name="my.xlsx",
@@ -29,25 +28,24 @@ def test_save_and_load_roundtrip(tmp_path, monkeypatch):
     assert loaded.world_delivery_price == "600"
 
 
-def test_load_missing_file_returns_defaults(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_load_missing_file_returns_defaults(app_dirs):
     s = load_settings()
     assert isinstance(s, AppSettings)
     assert s.accounts == {}
 
 
-def test_save_creates_valid_json(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_save_creates_valid_json(app_dirs):
     s = AppSettings(accounts={"A": "tok"})
     save_settings(s)
-    with open("settings.json", encoding="utf-8") as f:
+    settings_path = str(app_dirs / "settings.json")
+    with open(settings_path, encoding="utf-8") as f:
         data = json.load(f)
     assert data["accounts"] == {"A": "tok"}
 
 
-def test_load_ignores_unknown_fields(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    with open("settings.json", "w", encoding="utf-8") as f:
+def test_load_ignores_unknown_fields(app_dirs):
+    settings_path = str(app_dirs / "settings.json")
+    with open(settings_path, "w", encoding="utf-8") as f:
         json.dump({"accounts": {}, "unknown_field": "oops"}, f)
     s = load_settings()
     assert isinstance(s, AppSettings)

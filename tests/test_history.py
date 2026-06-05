@@ -9,20 +9,17 @@ SAMPLE = LotData(
 )
 
 
-def test_save_history_creates_file(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_save_history_creates_file(app_dirs):
     path = save_history(SAMPLE)
     assert os.path.exists(path)
 
 
-def test_save_history_filename_contains_name(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_save_history_filename_contains_name(app_dirs):
     path = save_history(SAMPLE)
     assert "Тест" in os.path.basename(path)
 
 
-def test_save_history_content(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_save_history_content(app_dirs):
     path = save_history(SAMPLE)
     with open(path, encoding="utf-8") as f:
         content = f.read()
@@ -33,7 +30,6 @@ def test_save_history_content(tmp_path, monkeypatch):
     assert parts[4] == SAMPLE.price
 
 
-def test_save_history_creates_dir(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_save_history_creates_dir(app_dirs):
     save_history(SAMPLE)
-    assert os.path.isdir("история")
+    assert os.path.isdir(str(app_dirs / "история"))

@@ -9,8 +9,7 @@ SAMPLE = LotData(
 )
 
 
-def test_serialize_roundtrip(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_serialize_roundtrip(app_dirs):
     save_template("mytemplate", SAMPLE)
     loaded = load_template("mytemplate")
     assert loaded is not None
@@ -21,27 +20,23 @@ def test_serialize_roundtrip(tmp_path, monkeypatch):
     assert loaded.account == SAMPLE.account
 
 
-def test_save_template_duplicate_raises(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_save_template_duplicate_raises(app_dirs):
     save_template("dup", SAMPLE)
     with pytest.raises(FileExistsError):
         save_template("dup", SAMPLE)
 
 
-def test_delete_template(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_delete_template(app_dirs):
     save_template("todel", SAMPLE)
     delete_template("todel")
     assert load_template("todel") is None
 
 
-def test_load_template_missing_returns_none(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_load_template_missing_returns_none(app_dirs):
     assert load_template("nonexistent") is None
 
 
-def test_list_templates(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_list_templates(app_dirs):
     save_template("aaa", SAMPLE)
     save_template("bbb", SAMPLE)
     names = list_templates()
@@ -49,13 +44,11 @@ def test_list_templates(tmp_path, monkeypatch):
     assert "bbb" in names
 
 
-def test_list_templates_empty_dir(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_list_templates_empty_dir(app_dirs):
     assert list_templates() == []
 
 
-def test_save_last(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_save_last(app_dirs):
     save_last(SAMPLE)
     loaded = load_template("last")
     assert loaded is not None
@@ -71,14 +64,13 @@ def test_serialize_format():
     assert parts[9] == SAMPLE.account
 
 
-def test_load_template_partial_fields(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    os.makedirs("шаблоны", exist_ok=True)
-    # шаблон без autoprod и account (8 полей)
-    with open("шаблоны/partial.txt", "w", encoding="utf-8") as f:
+def test_load_template_partial_fields(app_dirs):
+    templates_dir = str(app_dirs / "шаблоны")
+    os.makedirs(templates_dir, exist_ok=True)
+    with open(os.path.join(templates_dir, "partial.txt"), "w", encoding="utf-8") as f:
         f.write("Имя;1234;теги;описание;100;0;10;7")
     loaded = load_template("partial")
     assert loaded is not None
     assert loaded.name == "Имя"
-    assert loaded.autoprod == "0"   # default
-    assert loaded.account == ""    # default
+    assert loaded.autoprod == "0"
+    assert loaded.account == ""
