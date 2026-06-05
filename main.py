@@ -37,4 +37,4 @@ def main(page: ft.Page):
     navigate("form")
 
 
-ft.app(main)
+ft.run(main)

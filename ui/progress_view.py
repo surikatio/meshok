@@ -19,6 +19,7 @@ class ProgressView(ft.View):
         self.lot_data = lot_data
         self.url_list = url_list
         self.settings = settings
+        self._stop = False
         self._build()
         threading.Thread(target=self._run_posting, daemon=True).start()
 
@@ -31,6 +32,11 @@ class ProgressView(ft.View):
             icon=ft.Icons.ARROW_BACK,
             disabled=True,
             on_click=lambda e: self.navigate("form", settings=self.settings),
+        )
+        self.stop_button = ft.OutlinedButton(
+            "Остановить",
+            icon=ft.Icons.STOP,
+            on_click=self._on_stop,
         )
 
         self.controls = [
@@ -45,21 +51,35 @@ class ProgressView(ft.View):
                 border_radius=8,
                 padding=8,
             ),
-            ft.Container(self.back_button, margin=ft.margin.only(top=16)),
+            ft.Row([self.stop_button, self.back_button], spacing=12),
         ]
         self.padding = 24
         self.scroll = ft.ScrollMode.AUTO
+
+    def _on_stop(self, e):
+        self._stop = True
+        self.stop_button.disabled = True
+        self.status_text.value = "Остановка после текущего лота..."
+        self._pg.update()
 
     def _run_posting(self):
         total = len(self.url_list)
         account_token = self.settings.accounts.get(self.lot_data.account, "")
         log_lines: list[str] = []
+        ok_count = 0
+        err_count = 0
 
         lot_time = datetime.strptime(self.lot_data.date, "%Y-%m-%d %H:%M:%S")
         sleep_sec = int(self.lot_data.sleep_time or "10")
 
         for num, pic_urls in enumerate(self.url_list, start=1):
-            lot_time = lot_time + timedelta(seconds=sleep_sec)
+            if self._stop:
+                break
+
+            # первый лот — в указанное время, каждый следующий со сдвигом
+            if num > 1:
+                lot_time = lot_time + timedelta(seconds=sleep_sec)
+
             current_data = LotData(**{**self.lot_data.__dict__, "date": str(lot_time)})
 
             preview = pic_urls[0][:40] + ("..." if len(pic_urls[0]) > 40 else "")
@@ -69,20 +89,31 @@ class ProgressView(ft.View):
 
             try:
                 result = make_lot(current_data, pic_urls, account_token, self.settings)
-                status = result.get("success", "?")
                 error = result.get("error", "")
-                line = f"[{num}/{total}] {preview} ({len(pic_urls)} фото) → success={status}"
-                if error:
-                    line += f" ошибка: {error}"
+                if error and error != 0:
+                    err_count += 1
+                    line = f"[{num}/{total}] {preview} → ошибка: {error}"
+                else:
+                    ok_count += 1
+                    line = f"[{num}/{total}] {preview} ({len(pic_urls)} фото) → OK"
             except Exception as ex:
+                err_count += 1
                 line = f"[{num}/{total}] Ошибка запроса: {ex}"
 
             log_lines.append(line)
             self.log_text.value = "\n".join(log_lines[-20:])
             self.progress_bar.value = num / total
             self._pg.update()
-            time.sleep(1)
 
-        self.status_text.value = f"Готово! Выставлено {total} лотов."
+            if num < total and not self._stop:
+                time.sleep(sleep_sec)
+
+        if self._stop:
+            posted = ok_count + err_count
+            self.status_text.value = f"Остановлено. Выставлено {posted} из {total} ({err_count} ошибок)."
+        else:
+            self.status_text.value = f"Готово! {ok_count} выставлено, {err_count} ошибок."
+
+        self.stop_button.disabled = True
         self.back_button.disabled = False
         self._pg.update()

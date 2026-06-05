@@ -21,7 +21,7 @@ def make_lot(data: LotData, pic_urls: list[str], account_token: str, settings: A
         "prolong": settings.prolong,
         "antisniper": "Y" if data.autoprod == "1" else "N",
         "notify": "Y",
-        "tags": data.tags.replace(" ", ""),
+        "tags": ",".join(t.strip() for t in data.tags.split(",") if t.strip()),
         "localDelivery": "CHARGE",
         "localDeliveryPrice": settings.local_delivery_price,
         "countryDeliveryPrice": settings.country_delivery_price,

@@ -73,6 +73,16 @@ def test_make_lot_strips_spaces_from_category_and_price():
     assert params["startPrice"] == "50"
 
 
+def test_make_lot_tags_strips_spaces_around_commas():
+    data = LotData(**{**SAMPLE.__dict__, "tags": "японская еда , конфеты , сладкое"})
+    with patch("core.api.MeshokAPI") as MockAPI:
+        MockAPI.return_value = mock_api({})
+        make_lot(data, [], "tok", SETTINGS)
+
+    params = MockAPI.return_value.listItem.call_args[0][0]
+    assert params["tags"] == "японская еда,конфеты,сладкое"
+
+
 def test_make_lot_uses_settings_delivery_prices():
     with patch("core.api.MeshokAPI") as MockAPI:
         MockAPI.return_value = mock_api({})

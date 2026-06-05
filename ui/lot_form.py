@@ -46,6 +46,9 @@ class LotFormView(ft.View):
         )
         self.f_autoprod = ft.Checkbox(label="Авто-продление (антиснайпер)", value=False)
         self.excel_status = ft.Text(value="Загрузка картинок...", size=12, color=ft.Colors.GREY_500)
+        self.excel_refresh_btn = ft.IconButton(
+            ft.Icons.REFRESH, tooltip="Обновить список", on_click=lambda e: self._load_excel_async()
+        )
 
         def paste_to(field: ft.TextField):
             def handler(e):
@@ -81,7 +84,7 @@ class LotFormView(ft.View):
             self.f_longevity,
             self.f_account,
             self.f_autoprod,
-            self.excel_status,
+            ft.Row([self.excel_status, self.excel_refresh_btn]),
             ft.ElevatedButton("Запустить", on_click=self._on_run, icon=ft.Icons.PLAY_ARROW),
         ]
         self.scroll = ft.ScrollMode.AUTO
@@ -188,18 +191,26 @@ class LotFormView(ft.View):
 
     def _on_save_template(self, e):
         data = self._collect_data()
-        show_save_template_dialog(self.page, data, on_saved=lambda name: self._refresh_menu())
+        show_save_template_dialog(self._pg, data, on_saved=lambda name: self._refresh_menu())
 
     def _open_settings(self, e):
         self.navigate("settings", settings=self.settings)
 
     def _load_excel_async(self):
+        self.excel_status.value = "Загрузка..."
+        self.excel_status.color = ft.Colors.GREY_500
+        self._pg.update()
+
         def load():
             self.url_list = load_url_list(self.settings.table_name)
             lots = len(self.url_list)
             pics = sum(len(row) for row in self.url_list)
-            self.excel_status.value = f"Загружено {lots} лотов, {pics} фото" if lots else "Картинки не найдены"
-            self.excel_status.color = ft.Colors.GREEN_600 if lots else ft.Colors.RED_400
+            if lots:
+                self.excel_status.value = f"Загружено {lots} лотов, {pics} фото"
+                self.excel_status.color = ft.Colors.GREEN_600
+            else:
+                self.excel_status.value = f"Не найдено: {self.settings.table_name}"
+                self.excel_status.color = ft.Colors.RED_400
             self._pg.update()
         threading.Thread(target=load, daemon=True).start()
 
