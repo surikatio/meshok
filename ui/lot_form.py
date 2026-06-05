@@ -73,7 +73,8 @@ class LotFormView(ft.View):
                     expand=True,
                 ),
             ]),
-            ft.Divider(height=8),
+            ft.Row([self.excel_status, self.excel_refresh_btn]),
+            ft.Divider(height=4),
             row(self.f_name),
             row(self.f_category),
             row(self.f_tags),
@@ -84,7 +85,6 @@ class LotFormView(ft.View):
             self.f_longevity,
             self.f_account,
             self.f_autoprod,
-            ft.Row([self.excel_status, self.excel_refresh_btn]),
             ft.ElevatedButton("Запустить", on_click=self._on_run, icon=ft.Icons.PLAY_ARROW),
         ]
         self.scroll = ft.ScrollMode.AUTO
@@ -129,6 +129,7 @@ class LotFormView(ft.View):
                 expand=True,
             ),
         ])
+        # controls[1] — excel status row, остаётся без изменений
         self._pg.update()
 
     def _fill_form(self, data: LotData, update: bool = True):
