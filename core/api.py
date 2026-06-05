@@ -32,7 +32,7 @@ def make_lot(data: LotData, pic_urls: list[str], account_token: str, settings: A
         "description": data.description,
         "bold": "N",
         "recommended": "N",
-        "pictures": pic_urls,
+        "pictures": ",".join(pic_urls),
         "bestOffer": "Y",
     }
     result = api.listItem(params)

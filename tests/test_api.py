@@ -40,7 +40,7 @@ def test_make_lot_passes_pictures():
         make_lot(SAMPLE, ["http://img.com/1.jpg", "http://img.com/2.jpg"], "tok", SETTINGS)
 
     params = MockAPI.return_value.listItem.call_args[0][0]
-    assert params["pictures"] == ["http://img.com/1.jpg", "http://img.com/2.jpg"]
+    assert params["pictures"] == "http://img.com/1.jpg,http://img.com/2.jpg"
 
 
 def test_make_lot_autoprod_y():
