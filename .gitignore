@@ -1,0 +1,26 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Config with tokens (copy from auto_lot_config.example.py)
+auto_lot_сonfig.py
+
+# Logs
+log.txt
+
+# User data
+история/
+шаблоны/last.txt
+
+# Excel with image URLs (user data)
+*.xlsx
+
+# Claude settings
+.claude/
+
+# Legacy app
+main.pyz
+
+# Windows shortcuts
+*.url
