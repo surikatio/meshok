@@ -1,9 +1,19 @@
 import logging
+import os
 import flet as ft
+from core.paths import get_app_dir
 from core.settings import load_settings
 from ui.lot_form import LotFormView
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+_log_path = os.path.join(get_app_dir(), "log.txt")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    handlers=[
+        logging.FileHandler(_log_path, encoding="utf-8"),
+        logging.StreamHandler(),
+    ],
+)
 
 
 def main(page: ft.Page):
