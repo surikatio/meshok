@@ -199,10 +199,11 @@ class LotFormView(ft.View):
         self.navigate("settings", settings=self.settings)
 
     def _load_excel_async(self):
-        self.excel_status.value = "Загрузка..."
-        self.excel_status.color = ft.Colors.GREY_500
-
         def load():
+            self.excel_status.value = "Загрузка..."
+            self.excel_status.color = ft.Colors.GREY_500
+            self._pg.update()
+
             self.url_list = load_url_list(self.settings.table_name)
             lots = len(self.url_list)
             pics = sum(len(row) for row in self.url_list)
