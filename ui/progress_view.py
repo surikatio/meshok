@@ -5,18 +5,20 @@ from typing import Callable
 
 import flet as ft
 
-from auto_lot_сonfig import accounts
+from core.settings import AppSettings
 from core.templates import LotData
 from core.api import make_lot
 
 
 class ProgressView(ft.View):
-    def __init__(self, page: ft.Page, navigate: Callable, lot_data: LotData, url_list: list[list[str]]):
+    def __init__(self, page: ft.Page, navigate: Callable, lot_data: LotData,
+                 url_list: list[list[str]], settings: AppSettings):
         super().__init__(route="/progress")
         self._pg = page
         self.navigate = navigate
         self.lot_data = lot_data
         self.url_list = url_list
+        self.settings = settings
         self._build()
         threading.Thread(target=self._run_posting, daemon=True).start()
 
@@ -28,7 +30,7 @@ class ProgressView(ft.View):
             "Назад к форме",
             icon=ft.Icons.ARROW_BACK,
             disabled=True,
-            on_click=lambda e: self.navigate("form"),
+            on_click=lambda e: self.navigate("form", settings=self.settings),
         )
 
         self.controls = [
@@ -50,7 +52,7 @@ class ProgressView(ft.View):
 
     def _run_posting(self):
         total = len(self.url_list)
-        account_token = accounts.get(self.lot_data.account, "")
+        account_token = self.settings.accounts.get(self.lot_data.account, "")
         log_lines: list[str] = []
 
         lot_time = datetime.strptime(self.lot_data.date, "%Y-%m-%d %H:%M:%S")
@@ -58,9 +60,7 @@ class ProgressView(ft.View):
 
         for num, pic_urls in enumerate(self.url_list, start=1):
             lot_time = lot_time + timedelta(seconds=sleep_sec)
-            current_data = LotData(
-                **{**self.lot_data.__dict__, "date": str(lot_time)}
-            )
+            current_data = LotData(**{**self.lot_data.__dict__, "date": str(lot_time)})
 
             preview = pic_urls[0][:40] + ("..." if len(pic_urls[0]) > 40 else "")
             self.status_text.value = f"Выставляется лот {num} из {total} ({len(pic_urls)} фото)..."
@@ -68,7 +68,7 @@ class ProgressView(ft.View):
             self._pg.update()
 
             try:
-                result = make_lot(current_data, pic_urls, account_token)
+                result = make_lot(current_data, pic_urls, account_token, self.settings)
                 status = result.get("success", "?")
                 error = result.get("error", "")
                 line = f"[{num}/{total}] {preview} ({len(pic_urls)} фото) → success={status}"

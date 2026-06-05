@@ -1,12 +1,12 @@
 import logging
 from core.meshok_api import MeshokAPI
 from core.templates import LotData
-from auto_lot_сonfig import prolong, localDeliveryPrice, countryDeliveryPrice, worldDeliveryPrice
+from core.settings import AppSettings
 
 logger = logging.getLogger(__name__)
 
 
-def make_lot(data: LotData, pic_urls: list[str], account_token: str) -> dict:
+def make_lot(data: LotData, pic_urls: list[str], account_token: str, settings: AppSettings) -> dict:
     api = MeshokAPI(account_token)
     params = {
         "city": "58",
@@ -18,14 +18,14 @@ def make_lot(data: LotData, pic_urls: list[str], account_token: str) -> dict:
         "payment": "BANK,CARD,PAYPAL",
         "longevity": data.longevity,
         "delivery": "WORLD",
-        "prolong": prolong,
+        "prolong": settings.prolong,
         "antisniper": "Y" if data.autoprod == "1" else "N",
         "notify": "Y",
         "tags": data.tags.replace(" ", ""),
         "localDelivery": "CHARGE",
-        "localDeliveryPrice": localDeliveryPrice,
-        "countryDeliveryPrice": countryDeliveryPrice,
-        "worldDeliveryPrice": worldDeliveryPrice,
+        "localDeliveryPrice": settings.local_delivery_price,
+        "countryDeliveryPrice": settings.country_delivery_price,
+        "worldDeliveryPrice": settings.world_delivery_price,
         "minimalBuyerRate": "0",
         "condition": "NA",
         "listDateTime": data.date,
