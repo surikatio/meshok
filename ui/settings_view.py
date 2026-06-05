@@ -99,7 +99,7 @@ class SettingsView(ft.View):
         self._refresh_acc_list()
         self._pg.update()
 
-    def _on_file_picked(self, e: ft.FilePickerResultEvent):
+    def _on_file_picked(self, e):
         if e.files:
             self._f_table.value = e.files[0].path
             self._pg.update()
