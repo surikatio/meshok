@@ -108,8 +108,10 @@ History saves to `история/{name}-{timestamp}.txt` on each run (before pos
 - Endpoint: `POST https://api.meshok.net/sAPIv1/listItem`
 - Auth: `Authorization: Bearer {token}`
 - Hardcoded params: `city=58`, `saleType=Auction`, `delivery=WORLD`, `payment=BANK,CARD,PAYPAL`, `condition=NA`
-- `pictures` — comma-separated URLs; one Excel row = one lot, each column = one photo
+- `pictures` — comma-separated URLs string; one Excel row = one lot, each column = one photo URL
+  - Row with 3 columns → 1 lot with 3 photos; row with 1 column → 1 lot with 1 photo
 - Tags: spaces stripped around commas only, not inside tag words
+- Successful response: `{'success': 1, 'result': {'id': '...', 'endDateTime': '...'}, 'cost': 10, 'balance': ...}`
 - Error code `-2` in response = image URL rejected (hotlinking blocked)
 
 ## Posting Loop (ProgressView)
@@ -118,6 +120,15 @@ History saves to `история/{name}-{timestamp}.txt` on each run (before pos
 - Sleep of `sleep_sec` seconds between lots (after posting, not before first)
 - Stop button sets `self._stop = True`, loop exits after current lot finishes
 - Final message shows count of successful vs failed lots
+
+## Building exe
+
+```powershell
+.venv\Scripts\flet pack main.py --name "Avto-lot" --icon icon.ico --product-name "Авто-лот" --distpath dist
+```
+
+Result: `dist\Avto-lot.exe` (~61 MB, standalone, no Python required).
+User needs to place the Excel file next to the exe. `шаблоны/`, `история/`, `settings.json`, `log.txt` are created automatically next to the exe on first run.
 
 ## Logging
 
