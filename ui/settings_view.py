@@ -29,21 +29,10 @@ class SettingsView(ft.View):
 
         # --- Excel file ---
         self._f_table = ft.TextField(
-            label="Файл с картинками (Excel)",
+            label="Файл с картинками (Excel, путь или имя файла)",
             value=self.settings.table_name,
             expand=True,
         )
-        self._file_picker = ft.FilePicker(on_result=self._on_file_picked)
-        self._pg.overlay.append(self._file_picker)
-
-        table_row = ft.Row([
-            self._f_table,
-            ft.IconButton(ft.Icons.FOLDER_OPEN, tooltip="Выбрать файл",
-                          on_click=lambda e: self._file_picker.pick_files(
-                              allowed_extensions=["xlsx", "xls"],
-                              allow_multiple=False,
-                          )),
-        ])
 
         # --- Delivery ---
         self._f_prolong = ft.TextField(label="Продлений при неудаче", value=self.settings.prolong, width=200)
@@ -62,7 +51,7 @@ class SettingsView(ft.View):
             add_row,
             ft.Divider(),
             ft.Text("Файл с картинками", weight=ft.FontWeight.W_600, size=15),
-            table_row,
+            self._f_table,
             ft.Divider(),
             ft.Text("Доставка", weight=ft.FontWeight.W_600, size=15),
             ft.Row([self._f_prolong, self._f_local]),
@@ -98,11 +87,6 @@ class SettingsView(ft.View):
         self._acc_token.value = ""
         self._refresh_acc_list()
         self._pg.update()
-
-    def _on_file_picked(self, e):
-        if e.files:
-            self._f_table.value = e.files[0].path
-            self._pg.update()
 
     def _save_and_back(self):
         self.settings.table_name = (self._f_table.value or "").strip()

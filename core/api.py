@@ -6,8 +6,7 @@ from core.settings import AppSettings
 logger = logging.getLogger(__name__)
 
 
-def make_lot(data: LotData, pic_urls: list[str], account_token: str, settings: AppSettings) -> dict:
-    api = MeshokAPI(account_token)
+def make_lot(data: LotData, pic_urls: list[str], settings: AppSettings, api: MeshokAPI) -> dict:
     params = {
         "city": "58",
         "name": data.name,

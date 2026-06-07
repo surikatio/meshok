@@ -5,11 +5,12 @@ class MeshokAPI:
     def __init__(self, token):
         self.baseUrl = 'https://api.meshok.net/sAPIv1/'
         self.token = token
+        self.session = requests.Session()
+        self.session.headers.update({'Authorization': 'Bearer ' + self.token})
 
     def sendRequest(self, method, params={}):
         url = self.baseUrl + method
-        headers = {'Authorization': 'Bearer ' + self.token}
-        response = requests.post(url, data=params, headers=headers)
+        response = self.session.post(url, data=params, timeout=10)
         return response.json()
 
     def getItemList(self):

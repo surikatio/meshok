@@ -8,6 +8,7 @@ import flet as ft
 from core.settings import AppSettings
 from core.templates import LotData
 from core.api import make_lot
+from core.meshok_api import MeshokAPI
 
 
 class ProgressView(ft.View):
@@ -43,11 +44,11 @@ class ProgressView(ft.View):
             ft.Text("Выставление лотов", size=20, weight=ft.FontWeight.BOLD),
             ft.Divider(height=16),
             self.status_text,
-            ft.Container(self.progress_bar, margin=ft.margin.symmetric(vertical=12)),
+            ft.Container(self.progress_bar, margin=ft.Margin(0, 12, 0, 12)),
             ft.Container(
                 ft.Column([self.log_text], scroll=ft.ScrollMode.AUTO),
                 height=200,
-                border=ft.border.all(1, ft.Colors.GREY_300),
+                border=ft.Border(ft.BorderSide(1, ft.Colors.GREY_300), ft.BorderSide(1, ft.Colors.GREY_300), ft.BorderSide(1, ft.Colors.GREY_300), ft.BorderSide(1, ft.Colors.GREY_300)),
                 border_radius=8,
                 padding=8,
             ),
@@ -71,6 +72,7 @@ class ProgressView(ft.View):
 
         lot_time = datetime.strptime(self.lot_data.date, "%Y-%m-%d %H:%M:%S")
         sleep_sec = int(self.lot_data.sleep_time or "10")
+        api = MeshokAPI(account_token)
 
         for num, pic_urls in enumerate(self.url_list, start=1):
             if self._stop:
@@ -88,7 +90,7 @@ class ProgressView(ft.View):
             self._pg.update()
 
             try:
-                result = make_lot(current_data, pic_urls, account_token, self.settings)
+                result = make_lot(current_data, pic_urls, self.settings, api)
                 error = result.get("error", "")
                 if error and error != 0:
                     err_count += 1
