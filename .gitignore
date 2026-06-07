@@ -12,7 +12,7 @@ log.txt
 
 # User data
 история/
-шаблоны/last.txt
+шаблоны/
 
 # Excel with image URLs (user data)
 *.xlsx
