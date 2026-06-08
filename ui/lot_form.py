@@ -8,6 +8,7 @@ from core.settings import AppSettings
 from core.templates import LotData, list_templates, load_template, delete_template, save_last
 from core.history import save_history
 from core.validator import validate_lot_data
+from core.updater import check_for_update, download_and_apply
 from ui.template_dialog import show_save_template_dialog
 
 
@@ -18,9 +19,11 @@ class LotFormView(ft.View):
         self.navigate = navigate
         self.settings = settings
         self.url_list: list[list[str]] = []
+        self._update_url = ""
         self._build()
         self._load_excel_async()
         self._load_last_template()
+        self._check_update_async()
 
     def _build(self):
         account_names = list(self.settings.accounts.keys())
@@ -49,6 +52,22 @@ class LotFormView(ft.View):
         self.excel_refresh_btn = ft.IconButton(
             ft.Icons.REFRESH, tooltip="Обновить список", on_click=lambda e: self._load_excel_async()
         )
+        self._update_version_text = ft.Text("", color=ft.Colors.WHITE, expand=True, size=13)
+        self._update_banner = ft.Container(
+            content=ft.Row([
+                ft.Icon(ft.Icons.SYSTEM_UPDATE_ALT, color=ft.Colors.WHITE, size=18),
+                self._update_version_text,
+                ft.TextButton(
+                    "Обновить",
+                    on_click=self._on_update_click,
+                    style=ft.ButtonStyle(color=ft.Colors.WHITE),
+                ),
+            ]),
+            bgcolor=ft.Colors.BLUE_700,
+            padding=ft.padding.symmetric(horizontal=12, vertical=6),
+            border_radius=8,
+            visible=False,
+        )
 
         def paste_to(field: ft.TextField):
             def handler(e):
@@ -74,6 +93,7 @@ class LotFormView(ft.View):
                 ),
             ]),
             ft.Row([self.excel_status, self.excel_refresh_btn]),
+            self._update_banner,
             ft.Divider(height=4),
             row(self.f_name),
             row(self.f_category),
@@ -220,3 +240,49 @@ class LotFormView(ft.View):
         data = load_template("last")
         if data:
             self._fill_form(data, update=False)
+
+    def _check_update_async(self):
+        def check():
+            has_update, latest, url = check_for_update()
+            if has_update:
+                self._update_url = url
+                self._update_version_text.value = f"Доступно обновление v{latest}"
+                self._update_banner.visible = True
+                self._pg.update()
+        threading.Thread(target=check, daemon=True).start()
+
+    def _on_update_click(self, e):
+        if not self._update_url:
+            return
+
+        progress_bar = ft.ProgressBar(width=320, value=0)
+        status_text = ft.Text("Загрузка обновления...")
+        dlg = ft.AlertDialog(
+            title=ft.Text("Обновление программы"),
+            content=ft.Column([status_text, progress_bar], tight=True, spacing=12),
+            modal=True,
+        )
+        self._pg.overlay.append(dlg)
+        dlg.open = True
+        self._pg.update()
+
+        def do_update():
+            try:
+                def on_progress(p):
+                    progress_bar.value = p
+                    status_text.value = f"Загрузка... {int(p * 100)}%"
+                    self._pg.update()
+
+                download_and_apply(self._update_url, on_progress=on_progress)
+                status_text.value = "Готово! Приложение закроется и перезапустится."
+                progress_bar.value = 1.0
+                self._pg.update()
+                import time
+                time.sleep(2)
+                self._pg.window.close()
+            except Exception as exc:
+                progress_bar.visible = False
+                status_text.value = f"Ошибка: {exc}"
+                self._pg.update()
+
+        threading.Thread(target=do_update, daemon=True).start()

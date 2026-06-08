@@ -135,6 +135,24 @@ User needs to place the Excel file next to the exe. `шаблоны/`, `исто
 - Written to `log.txt` next to exe (and to stderr when running from source)
 - Configured in `main.py` with both `FileHandler` and `StreamHandler`
 
+## Auto-Update System
+
+- `core/updater.py` — checks `https://api.github.com/repos/surikatio/meshok/releases/latest`
+- `CURRENT_VERSION` in `updater.py` must be bumped before each release
+- On startup `LotFormView` runs `check_for_update()` in background; shows blue banner if update found
+- User clicks "Обновить" → new exe downloaded → `_update.bat` created → bat waits for process exit, replaces exe, restarts
+- **Only works when running as frozen exe** (`sys.frozen`); skipped silently when running from source
+
+### Releasing a new version
+
+```powershell
+# 1. Bump CURRENT_VERSION in core/updater.py (e.g. "1.0.1")
+# 2. Build exe
+.venv\Scripts\flet pack main.py --name "Avto-lot" --icon icon.ico --product-name "Авто-лот" --distpath dist
+# 3. Create GitHub release with exe attached
+gh release create v1.0.1 dist/Avto-lot.exe --title "v1.0.1" --notes "Описание изменений"
+```
+
 ## Known Issues
 
 - **Image error -2** — postimg.cc blocks hotlinking; need alternative image hosting or direct upload
