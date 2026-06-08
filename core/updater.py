@@ -11,6 +11,7 @@ _log = logging.getLogger(__name__)
 
 def check_for_update() -> tuple[bool, str, str]:
     """Returns (has_update, latest_version, download_url)."""
+    _log.info("Update check started, current version: %s", CURRENT_VERSION)
     try:
         resp = requests.get(_GITHUB_API, timeout=8)
         resp.raise_for_status()
@@ -21,6 +22,7 @@ def check_for_update() -> tuple[bool, str, str]:
             "",
         )
         has_update = _is_newer(latest, CURRENT_VERSION) and bool(download_url)
+        _log.info("Update check: latest=%s has_update=%s", latest, has_update)
         return has_update, latest, download_url
     except Exception as exc:
         _log.warning("Update check failed: %s", exc)
