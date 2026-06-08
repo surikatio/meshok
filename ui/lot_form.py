@@ -248,7 +248,7 @@ class LotFormView(ft.View):
                 self._update_url = url
                 self._update_version_text.value = f"Доступно обновление v{latest}"
                 self._update_banner.visible = True
-                self._pg.update()
+                self._update_banner.update()
         threading.Thread(target=check, daemon=True).start()
 
     def _on_update_click(self, e):
