@@ -130,6 +130,11 @@ History saves to `история/{name}-{timestamp}.txt` on each run (before pos
 Result: `dist\Avto-lot.exe` (~61 MB, standalone, no Python required).
 User needs to place the Excel file next to the exe. `шаблоны/`, `история/`, `settings.json`, `log.txt` are created automatically next to the exe on first run.
 
+**После каждой сборки exe при наличии изменений — обязательно обновить релиз на GitHub:**
+1. Поднять `CURRENT_VERSION` в `core/updater.py`
+2. Пересобрать exe
+3. Создать новый релиз: `gh release create vX.Y.Z dist/Avto-lot.exe --title "vX.Y.Z" --notes "..."`
+
 ## Logging
 
 - Written to `log.txt` next to exe (and to stderr when running from source)
