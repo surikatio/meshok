@@ -117,7 +117,7 @@ History saves to `история/{name}-{timestamp}.txt` on each run (before pos
 ## Posting Loop (ProgressView)
 
 - First lot posted at the time specified in the form; each subsequent lot shifted by `sleep_time` seconds
-- Sleep of `sleep_sec` seconds between lots (after posting, not before first)
+- Fixed 1-second sleep between API requests (rate-limit protection, independent of `sleep_time`)
 - Stop button sets `self._stop = True`, loop exits after current lot finishes
 - Final message shows count of successful vs failed lots
 
@@ -145,6 +145,11 @@ User needs to place the Excel file next to the exe. `шаблоны/`, `исто
 - `FilePicker` in this version cannot be passed `on_result` in constructor — set as attribute after construction (currently not used)
 - Do not call `page.update()` inside `View.__init__()` before the view is appended to `page.views`
 - All background thread UI updates via `self._pg.update()` are safe after mounting
+
+## Git Workflow
+
+- After modifying any file — commit and push to GitHub (`git push origin main`)
+- After reverting any file — also revert the corresponding commit on GitHub (`git revert` or `git push --force` only if explicitly requested)
 
 ## Allowed Tools
 - Bash(gh:*)

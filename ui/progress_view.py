@@ -108,7 +108,7 @@ class ProgressView(ft.View):
             self._pg.update()
 
             if num < total and not self._stop:
-                time.sleep(sleep_sec)
+                time.sleep(1)
 
         if self._stop:
             posted = ok_count + err_count
