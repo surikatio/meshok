@@ -64,7 +64,7 @@ class LotFormView(ft.View):
                 ),
             ]),
             bgcolor=ft.Colors.BLUE_700,
-            padding=ft.padding.symmetric(horizontal=12, vertical=6),
+            padding=8,
             border_radius=8,
             visible=False,
         )
