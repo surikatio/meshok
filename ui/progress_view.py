@@ -87,7 +87,8 @@ class ProgressView(ft.View):
             preview = pic_urls[0][:40] + ("..." if len(pic_urls[0]) > 40 else "")
             self.status_text.value = f"Выставляется лот {num} из {total} ({len(pic_urls)} фото)..."
             self.progress_bar.value = (num - 1) / total
-            self._pg.update()
+            self.status_text.update()
+            self.progress_bar.update()
 
             try:
                 result = make_lot(current_data, pic_urls, self.settings, api)
@@ -105,7 +106,8 @@ class ProgressView(ft.View):
             log_lines.append(line)
             self.log_text.value = "\n".join(log_lines[-20:])
             self.progress_bar.value = num / total
-            self._pg.update()
+            self.log_text.update()
+            self.progress_bar.update()
 
             if num < total and not self._stop:
                 time.sleep(1)
@@ -118,4 +120,6 @@ class ProgressView(ft.View):
 
         self.stop_button.disabled = True
         self.back_button.disabled = False
-        self._pg.update()
+        self.status_text.update()
+        self.stop_button.update()
+        self.back_button.update()
