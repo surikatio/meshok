@@ -6,7 +6,7 @@ import subprocess
 import logging
 import requests
 
-CURRENT_VERSION = "1.0.8"
+CURRENT_VERSION = "1.0.9"
 _GITHUB_API = "https://api.github.com/repos/surikatio/meshok/releases/latest"
 _log = logging.getLogger(__name__)
 
@@ -69,7 +69,15 @@ def download_and_apply(download_url: str, on_progress=None) -> None:
         "    timeout /t 1 /nobreak >nul\n"
         "    goto wait\n"
         ")\n"
-        f'move /y "{new_exe}" "{exe_path}"\n'
+        # после исчезновения PID процесс ещё может удерживать файлы
+        # (очистка временной _MEI-папки PyInstaller) — даём время освободиться
+        "timeout /t 1 /nobreak >nul\n"
+        ":move\n"
+        f'move /y "{new_exe}" "{exe_path}" >nul 2>&1\n'
+        "if errorlevel 1 (\n"
+        "    timeout /t 1 /nobreak >nul\n"
+        "    goto move\n"
+        ")\n"
         f'start "" "{exe_path}"\n'
         'del "%~f0"\n'
     )

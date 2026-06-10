@@ -1,5 +1,6 @@
 """Главный экран: форма параметров лота, шаблоны, статус Excel и баннер обновления."""
 
+import os
 import threading
 import flet as ft
 from datetime import datetime
@@ -341,6 +342,10 @@ class LotFormView(ft.View):
                 import time
                 time.sleep(2)
                 self._pg.window.close()
+                # window.close() не всегда завершает процесс (PyInstaller onefile),
+                # из-за чего bat-скрипт обновления зависает в ожидании выхода процесса
+                time.sleep(0.5)
+                os._exit(0)
             except Exception as exc:
                 progress_bar.visible = False
                 status_text.value = f"Ошибка: {exc}"
