@@ -64,6 +64,10 @@ class LotFormView(ft.View):
         self.excel_refresh_btn = ft.IconButton(
             ft.Icons.REFRESH, tooltip="Обновить список", on_click=lambda e: self._load_excel_async()
         )
+        self.check_urls_btn = ft.IconButton(
+            ft.Icons.LINK, tooltip="Проверить ссылки на картинки", on_click=lambda e: self._check_urls_async()
+        )
+        self.url_check_status = ft.Text(value="", size=12, color=ft.Colors.GREY_500)
         self._update_version_text = ft.Text("", color=ft.Colors.WHITE, expand=True, size=13)
         self._update_banner = ft.Container(
             content=ft.Row([
@@ -104,7 +108,8 @@ class LotFormView(ft.View):
                     expand=True,
                 ),
             ]),
-            ft.Row([self.excel_status, self.excel_refresh_btn]),
+            ft.Row([self.excel_status, self.excel_refresh_btn, self.check_urls_btn]),
+            ft.Row([self.url_check_status]),
             self._update_banner,
             ft.Divider(height=4),
             row(self.f_name),
@@ -240,7 +245,8 @@ class LotFormView(ft.View):
         def load():
             self.excel_status.value = "Загрузка..."
             self.excel_status.color = ft.Colors.GREY_500
-            self._update(self.excel_status)
+            self.url_check_status.value = ""
+            self._update(self.excel_status, self.url_check_status)
 
             self.url_list = load_url_list(self.settings.table_name)
             lots = len(self.url_list)
@@ -248,22 +254,33 @@ class LotFormView(ft.View):
             if lots:
                 self.excel_status.value = f"Загружено {lots} лотов, {pics} фото"
                 self.excel_status.color = ft.Colors.GREEN_600
-                self._update(self.excel_status)
-                self._check_urls_async()
             else:
                 self.excel_status.value = f"Не найдено: {self.settings.table_name}"
                 self.excel_status.color = ft.Colors.RED_400
-                self._update(self.excel_status)
+            self._update(self.excel_status)
         threading.Thread(target=load, daemon=True).start()
 
     def _check_urls_async(self):
-        """Проверяет доступность всех URL картинок в фоне, дополняет статус-строку."""
+        """По нажатию кнопки проверяет доступность всех URL картинок в фоне."""
+        if not self.url_list:
+            return
+
         def check():
+            self.check_urls_btn.disabled = True
+            self.url_check_status.value = "Проверка ссылок..."
+            self.url_check_status.color = ft.Colors.GREY_500
+            self._update(self.check_urls_btn, self.url_check_status)
+
             broken = check_url_list(self.url_list)
             if broken:
-                self.excel_status.value += f" ({len(broken)} картинок недоступны)"
-                self.excel_status.color = ft.Colors.ORANGE_700
-                self._update(self.excel_status)
+                self.url_check_status.value = f"{len(broken)} картинок недоступны"
+                self.url_check_status.color = ft.Colors.ORANGE_700
+            else:
+                self.url_check_status.value = "Все ссылки доступны"
+                self.url_check_status.color = ft.Colors.GREEN_600
+
+            self.check_urls_btn.disabled = False
+            self._update(self.check_urls_btn, self.url_check_status)
         threading.Thread(target=check, daemon=True).start()
 
     def _load_last_template(self):
