@@ -22,6 +22,8 @@ class ProgressView(ft.View):
         self.settings = settings
         self._stop = False
         self._build()
+
+    def did_mount(self):
         threading.Thread(target=self._run_posting, daemon=True).start()
 
     def _build(self):
