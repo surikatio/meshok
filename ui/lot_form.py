@@ -64,8 +64,11 @@ class LotFormView(ft.View):
         self.excel_refresh_btn = ft.IconButton(
             ft.Icons.REFRESH, tooltip="Обновить список", on_click=lambda e: self._load_excel_async()
         )
-        self.check_urls_btn = ft.IconButton(
-            ft.Icons.LINK, tooltip="Проверить ссылки на картинки", on_click=lambda e: self._check_urls_async()
+        self.check_urls_btn = ft.OutlinedButton(
+            "Проверить ссылки",
+            icon=ft.Icons.LINK,
+            tooltip="Проверить доступность ссылок на картинки",
+            on_click=lambda e: self._check_urls_async(),
         )
         self.url_check_status = ft.Text(value="", size=12, color=ft.Colors.GREY_500)
         self.url_check_progress = ft.ProgressBar(value=0, width=200, visible=False)
