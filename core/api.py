@@ -1,3 +1,5 @@
+"""Сборка параметров лота и публикация на meshok.net."""
+
 import logging
 from core.meshok_api import MeshokAPI
 from core.templates import LotData
@@ -7,6 +9,12 @@ logger = logging.getLogger(__name__)
 
 
 def make_lot(data: LotData, pic_urls: list[str], settings: AppSettings, api: MeshokAPI) -> dict:
+    """Формирует параметры запроса listItem из данных лота и настроек, отправляет через api.
+
+    pic_urls — фотографии этого конкретного лота (одна строка Excel),
+    settings — глобальные настройки (цены доставки, число продлений).
+    Возвращает разобранный JSON-ответ meshok.net.
+    """
     params = {
         "city": "58",
         "name": data.name,

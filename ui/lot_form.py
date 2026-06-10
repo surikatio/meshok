@@ -1,3 +1,5 @@
+"""Главный экран: форма параметров лота, шаблоны, статус Excel и баннер обновления."""
+
 import threading
 import flet as ft
 from datetime import datetime
@@ -13,6 +15,8 @@ from ui.template_dialog import show_save_template_dialog
 
 
 class LotFormView(ft.View):
+    """Экран ввода параметров лота, выбора шаблона/аккаунта и запуска публикации."""
+
     def __init__(self, page: ft.Page, navigate: Callable, settings: AppSettings):
         super().__init__(route="/")
         self._pg = page
@@ -118,6 +122,7 @@ class LotFormView(ft.View):
         self.padding = 16
 
     def _build_menu_bar(self) -> ft.Control:
+        """Строит выпадающее меню "Шаблоны" с пунктами сохранения, открытия и удаления."""
         def open_template(name):
             def handler(e):
                 data = load_template(name)
@@ -148,6 +153,7 @@ class LotFormView(ft.View):
         return self.menu_button
 
     def _refresh_menu(self):
+        """Перестраивает строку меню после сохранения/удаления шаблона."""
         self.controls[0] = ft.Row([
             self._build_menu_bar(),
             ft.Row(
@@ -160,6 +166,7 @@ class LotFormView(ft.View):
         self._pg.update()
 
     def _fill_form(self, data: LotData, update: bool = True):
+        """Подставляет значения LotData в поля формы. update=False — без вызова page.update() (при первичной загрузке)."""
         self.f_name.value = data.name
         self.f_category.value = data.category
         self.f_tags.value = data.tags
@@ -175,6 +182,7 @@ class LotFormView(ft.View):
             self._pg.update()
 
     def _collect_data(self) -> LotData:
+        """Собирает значения полей формы в LotData. Дата "0"/пусто заменяется на текущее время."""
         date_val = self.f_date.value.strip() if self.f_date.value else "0"
         if date_val == "0" or not date_val:
             date_val = str(datetime.now())[:-7]
@@ -192,6 +200,7 @@ class LotFormView(ft.View):
         )
 
     def _on_run(self, e):
+        """Валидирует форму, сохраняет шаблон "last" и журнал, переходит на экран публикации."""
         data = self._collect_data()
         errors = validate_lot_data(data)
         if errors:
@@ -226,6 +235,7 @@ class LotFormView(ft.View):
         self.navigate("settings", settings=self.settings)
 
     def _load_excel_async(self):
+        """Загружает url_list из Excel в фоновом потоке и обновляет статус-строку."""
         def load():
             self.excel_status.value = "Загрузка..."
             self.excel_status.color = ft.Colors.GREY_500
@@ -249,6 +259,7 @@ class LotFormView(ft.View):
             self._fill_form(data, update=False)
 
     def _check_update_async(self):
+        """Проверяет наличие новой версии в фоне и показывает баннер обновления при необходимости."""
         def check():
             has_update, latest, url = check_for_update()
             if has_update:
@@ -259,6 +270,7 @@ class LotFormView(ft.View):
         threading.Thread(target=check, daemon=True).start()
 
     def _on_update_click(self, e):
+        """Скачивает и устанавливает обновление, показывая прогресс в диалоге, затем закрывает окно."""
         if not self._update_url:
             return
 

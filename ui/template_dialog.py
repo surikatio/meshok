@@ -1,3 +1,5 @@
+"""Диалог сохранения текущих параметров формы как именованного шаблона."""
+
 from typing import Callable
 import flet as ft
 from core.templates import LotData, save_template
@@ -8,6 +10,10 @@ def show_save_template_dialog(
     data: LotData,
     on_saved: Callable[[str], None],
 ) -> None:
+    """Показывает диалог ввода имени шаблона и сохраняет data через save_template.
+
+    on_saved(name) вызывается после успешного сохранения (для обновления меню шаблонов).
+    """
     name_field = ft.TextField(label="Название шаблона", autofocus=True)
     error_text = ft.Text(color=ft.Colors.RED_400, visible=False)
 

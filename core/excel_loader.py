@@ -1,3 +1,5 @@
+"""Чтение списка ссылок на фотографии из Excel-файла."""
+
 import logging
 import os
 import openpyxl as excel
@@ -7,7 +9,12 @@ logger = logging.getLogger(__name__)
 
 
 def load_url_list(table_name: str) -> list[list[str]]:
-    """Одна строка Excel = один лот, каждая колонка = один URL картинки."""
+    """Загружает таблицу с URL картинок.
+
+    Одна строка Excel = один лот, каждая непустая ячейка строки = URL одной фотографии.
+    table_name может быть относительным (ищется рядом с приложением) или абсолютным путём.
+    Возвращает пустой список, если файл не найден или его не удалось прочитать.
+    """
     if not os.path.isabs(table_name):
         table_name = os.path.join(get_app_dir(), table_name)
     try:

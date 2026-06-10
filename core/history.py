@@ -1,3 +1,5 @@
+"""Сохранение журнала запусков в каталог "история"."""
+
 import os
 from datetime import datetime
 from core.templates import LotData
@@ -7,6 +9,7 @@ HISTORY_DIR = os.path.join(get_app_dir(), "история")
 
 
 def save_history(data: LotData) -> str:
+    """Записывает параметры лота в "история/{name}-{timestamp}.txt" и возвращает путь к файлу."""
     os.makedirs(HISTORY_DIR, exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
     filename = f"{data.name}-{timestamp}.txt"

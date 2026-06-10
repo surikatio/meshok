@@ -1,7 +1,11 @@
+"""Тонкий клиент REST API meshok.net (sAPIv1), на основе meshokteam/sAPI-py."""
+
 import requests
 
 
 class MeshokAPI:
+    """Сессия с авторизацией Bearer-токеном для одного аккаунта meshok.net."""
+
     def __init__(self, token):
         self.baseUrl = 'https://api.meshok.net/sAPIv1/'
         self.token = token
@@ -9,6 +13,7 @@ class MeshokAPI:
         self.session.headers.update({'Authorization': 'Bearer ' + self.token})
 
     def sendRequest(self, method, params={}):
+        """POST на {baseUrl}{method} с переданными params, возвращает разобранный JSON-ответ."""
         url = self.baseUrl + method
         response = self.session.post(url, data=params, timeout=10)
         return response.json()
@@ -59,6 +64,7 @@ class MeshokAPI:
         return self.sendRequest('deleteItem', {'id': id})
 
     def listItem(self, params):
+        """Публикует новый лот. Используется в core.api.make_lot."""
         return self.sendRequest('listItem', params)
 
     def updateItem(self, params):

@@ -1,3 +1,5 @@
+"""Проверка и установка обновлений приложения из релизов GitHub (только для собранного exe)."""
+
 import os
 import sys
 import subprocess

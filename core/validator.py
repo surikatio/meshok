@@ -1,3 +1,5 @@
+"""Проверка полей формы лота перед публикацией."""
+
 from datetime import datetime
 from core.templates import LotData
 
@@ -5,6 +7,10 @@ DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def validate_lot_data(data: LotData) -> list[str]:
+    """Проверяет поля LotData и возвращает список понятных пользователю сообщений об ошибках.
+
+    Пустой список означает, что данные корректны и можно запускать публикацию.
+    """
     errors = []
 
     if not data.name:

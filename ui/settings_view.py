@@ -1,9 +1,13 @@
+"""Экран настроек: аккаунты, файл с картинками и цены доставки."""
+
 from typing import Callable
 import flet as ft
 from core.settings import AppSettings, save_settings
 
 
 class SettingsView(ft.View):
+    """Редактирование AppSettings: добавление/удаление аккаунтов, Excel-файл, цены доставки."""
+
     def __init__(self, page: ft.Page, navigate: Callable, settings: AppSettings):
         super().__init__(route="/settings")
         self._pg = page
@@ -61,6 +65,7 @@ class SettingsView(ft.View):
         ]
 
     def _refresh_acc_list(self):
+        """Перестраивает список аккаунтов (имя + маскированный токен + кнопка удаления)."""
         def make_delete(name):
             def handler(e):
                 self.settings.accounts.pop(name, None)
@@ -78,6 +83,7 @@ class SettingsView(ft.View):
         ]
 
     def _add_account(self, e):
+        """Добавляет аккаунт (имя → токен) из полей формы в settings.accounts."""
         name = (self._acc_name.value or "").strip()
         token = (self._acc_token.value or "").strip()
         if not name or not token:
@@ -89,6 +95,7 @@ class SettingsView(ft.View):
         self._pg.update()
 
     def _save_and_back(self):
+        """Сохраняет поля настроек в settings.json и возвращается на главный экран."""
         self.settings.table_name = (self._f_table.value or "").strip()
         self.settings.prolong = (self._f_prolong.value or "0").strip()
         self.settings.local_delivery_price = (self._f_local.value or "0").strip()

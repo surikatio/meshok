@@ -1,3 +1,5 @@
+"""Экран публикации: цикл отправки лотов, live-лог и прогресс-бар."""
+
 import time
 from datetime import datetime, timedelta
 from typing import Callable
@@ -11,6 +13,8 @@ from core.meshok_api import MeshokAPI
 
 
 class ProgressView(ft.View):
+    """Запускает и отображает цикл публикации лотов: один лот на строку url_list."""
+
     def __init__(self, page: ft.Page, navigate: Callable, lot_data: LotData,
                  url_list: list[list[str]], settings: AppSettings):
         super().__init__(route="/progress")
@@ -23,6 +27,7 @@ class ProgressView(ft.View):
         self._build()
 
     def did_mount(self):
+        """Запускает цикл публикации в фоновом потоке после монтирования экрана."""
         self._pg.run_thread(self._run_posting)
 
     def _update(self, *controls: ft.Control):
@@ -66,12 +71,20 @@ class ProgressView(ft.View):
         self.scroll = ft.ScrollMode.AUTO
 
     def _on_stop(self, e):
+        """Запрашивает остановку: цикл завершит текущий лот и не начнёт следующий."""
         self._stop = True
         self.stop_button.disabled = True
         self.status_text.value = "Остановка после текущего лота..."
         self._pg.update()
 
     def _run_posting(self):
+        """Публикует по одному лоту на каждую строку url_list.
+
+        Дата старта первого лота берётся из формы, каждый следующий лот сдвигается
+        на sleep_time секунд. Между запросами выдерживается фиксированная пауза в 1
+        секунду (защита от рейт-лимита), независимо от sleep_time. Обновляет лог,
+        прогресс-бар и итоговый счётчик успехов/ошибок.
+        """
         total = len(self.url_list)
         account_token = self.settings.accounts.get(self.lot_data.account, "")
         log_lines: list[str] = []

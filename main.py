@@ -1,3 +1,5 @@
+"""Точка входа приложения: настройка логирования и запуск Flet-окна."""
+
 import logging
 import os
 import flet as ft
@@ -17,6 +19,7 @@ logging.basicConfig(
 
 
 def main(page: ft.Page):
+    """Инициализирует окно и регистрирует навигацию между экранами (форма/прогресс/настройки)."""
     page.title = "Авто-лот"
     page.window.width = 540
     page.window.height = 680
@@ -31,6 +34,7 @@ def main(page: ft.Page):
     settings = load_settings()
 
     def navigate(view_name: str, **kwargs):
+        """Заменяет текущий экран на view_name ("form", "progress" или "settings")."""
         page.views.clear()
         if view_name == "form":
             s = kwargs.get("settings", settings)
