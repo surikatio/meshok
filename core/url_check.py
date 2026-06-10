@@ -38,16 +38,23 @@ def check_image_url(url: str, timeout: int = 15) -> bool:
     return False
 
 
-def check_url_list(url_list: list[list[str]]) -> list[str]:
-    """Последовательно проверяет все URL из url_list, возвращает список недоступных."""
+def check_url_list(url_list: list[list[str]], on_progress=None) -> list[str]:
+    """Последовательно проверяет все URL из url_list, возвращает список недоступных.
+
+    on_progress(checked, total, broken_count) вызывается после каждой проверки,
+    если передан — используется для отображения прогресса в UI.
+    """
     all_urls = [url for row in url_list for url in row]
-    logger.info("Starting URL check for %d images", len(all_urls))
+    total = len(all_urls)
+    logger.info("Starting URL check for %d images", total)
     broken = []
     for i, url in enumerate(all_urls, start=1):
         if i > 1:
             time.sleep(DELAY_BETWEEN_REQUESTS)
         if not check_image_url(url):
             broken.append(url)
-        logger.info("Checked %d/%d images, %d broken so far", i, len(all_urls), len(broken))
-    logger.info("URL check finished: %d/%d images broken", len(broken), len(all_urls))
+        logger.info("Checked %d/%d images, %d broken so far", i, total, len(broken))
+        if on_progress:
+            on_progress(i, total, len(broken))
+    logger.info("URL check finished: %d/%d images broken", len(broken), total)
     return broken

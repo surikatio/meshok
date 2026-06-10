@@ -68,6 +68,7 @@ class LotFormView(ft.View):
             ft.Icons.LINK, tooltip="Проверить ссылки на картинки", on_click=lambda e: self._check_urls_async()
         )
         self.url_check_status = ft.Text(value="", size=12, color=ft.Colors.GREY_500)
+        self.url_check_progress = ft.ProgressBar(value=0, width=200, visible=False)
         self._update_version_text = ft.Text("", color=ft.Colors.WHITE, expand=True, size=13)
         self._update_banner = ft.Container(
             content=ft.Row([
@@ -109,7 +110,7 @@ class LotFormView(ft.View):
                 ),
             ]),
             ft.Row([self.excel_status, self.excel_refresh_btn, self.check_urls_btn]),
-            ft.Row([self.url_check_status]),
+            ft.Row([self.url_check_progress, self.url_check_status]),
             self._update_banner,
             ft.Divider(height=4),
             row(self.f_name),
@@ -265,13 +266,20 @@ class LotFormView(ft.View):
         if not self.url_list:
             return
 
+        def on_progress(checked, total, broken_count):
+            self.url_check_progress.value = checked / total
+            self.url_check_status.value = f"Проверено {checked}/{total} ({broken_count} недоступны)"
+            self._update(self.url_check_progress, self.url_check_status)
+
         def check():
             self.check_urls_btn.disabled = True
+            self.url_check_progress.value = 0
+            self.url_check_progress.visible = True
             self.url_check_status.value = "Проверка ссылок..."
             self.url_check_status.color = ft.Colors.GREY_500
-            self._update(self.check_urls_btn, self.url_check_status)
+            self._update(self.check_urls_btn, self.url_check_progress, self.url_check_status)
 
-            broken = check_url_list(self.url_list)
+            broken = check_url_list(self.url_list, on_progress=on_progress)
             if broken:
                 self.url_check_status.value = f"{len(broken)} картинок недоступны"
                 self.url_check_status.color = ft.Colors.ORANGE_700
@@ -280,7 +288,8 @@ class LotFormView(ft.View):
                 self.url_check_status.color = ft.Colors.GREEN_600
 
             self.check_urls_btn.disabled = False
-            self._update(self.check_urls_btn, self.url_check_status)
+            self.url_check_progress.visible = False
+            self._update(self.check_urls_btn, self.url_check_progress, self.url_check_status)
         threading.Thread(target=check, daemon=True).start()
 
     def _load_last_template(self):
