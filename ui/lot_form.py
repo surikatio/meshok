@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Callable
 
 from core.excel_loader import load_url_list
+from core.url_check import check_url_list
 from core.settings import AppSettings
 from core.templates import LotData, list_templates, load_template, delete_template, save_last
 from core.history import save_history
@@ -247,11 +248,23 @@ class LotFormView(ft.View):
             if lots:
                 self.excel_status.value = f"Загружено {lots} лотов, {pics} фото"
                 self.excel_status.color = ft.Colors.GREEN_600
+                self._update(self.excel_status)
+                self._check_urls_async()
             else:
                 self.excel_status.value = f"Не найдено: {self.settings.table_name}"
                 self.excel_status.color = ft.Colors.RED_400
-            self._update(self.excel_status)
+                self._update(self.excel_status)
         threading.Thread(target=load, daemon=True).start()
+
+    def _check_urls_async(self):
+        """Проверяет доступность всех URL картинок в фоне, дополняет статус-строку."""
+        def check():
+            broken = check_url_list(self.url_list)
+            if broken:
+                self.excel_status.value += f" ({len(broken)} картинок недоступны)"
+                self.excel_status.color = ft.Colors.ORANGE_700
+                self._update(self.excel_status)
+        threading.Thread(target=check, daemon=True).start()
 
     def _load_last_template(self):
         data = load_template("last")

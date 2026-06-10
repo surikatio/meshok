@@ -11,6 +11,8 @@ from core.templates import LotData
 from core.api import make_lot
 from core.meshok_api import MeshokAPI
 
+MAX_ATTEMPTS = 3
+
 
 class ProgressView(ft.View):
     """Запускает и отображает цикл публикации лотов: один лот на строку url_list."""
@@ -110,18 +112,30 @@ class ProgressView(ft.View):
             self.progress_bar.value = (num - 1) / total
             self._update(self.status_text, self.progress_bar)
 
-            try:
-                result = make_lot(current_data, pic_urls, self.settings, api)
-                error = result.get("error", "")
-                if error and error != 0:
-                    err_count += 1
-                    line = f"[{num}/{total}] {preview} → ошибка: {error}"
-                else:
-                    ok_count += 1
-                    line = f"[{num}/{total}] {preview} ({len(pic_urls)} фото) → OK"
-            except Exception as ex:
+            error = ""
+            attempt = 1
+            while True:
+                try:
+                    result = make_lot(current_data, pic_urls, self.settings, api)
+                    error = result.get("error", "")
+                except Exception as ex:
+                    error = str(ex)
+
+                if not error or error == 0:
+                    break
+                # повтор только при временной ошибке загрузки картинки
+                if "Картинка" not in str(error) or attempt >= MAX_ATTEMPTS:
+                    break
+                attempt += 1
+                time.sleep(2)
+
+            if error and error != 0:
                 err_count += 1
-                line = f"[{num}/{total}] Ошибка запроса: {ex}"
+                suffix = f" (после {attempt} попыток)" if attempt > 1 else ""
+                line = f"[{num}/{total}] {preview} → ошибка{suffix}: {error}"
+            else:
+                ok_count += 1
+                line = f"[{num}/{total}] {preview} ({len(pic_urls)} фото) → OK"
 
             log_lines.append(line)
             self.log_text.value = "\n".join(log_lines[-20:])
