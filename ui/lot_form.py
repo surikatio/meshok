@@ -25,6 +25,13 @@ class LotFormView(ft.View):
         self._load_last_template()
         self._check_update_async()
 
+    def _update(self, *controls: ft.Control):
+        # control.update() must run on the page's event loop thread, otherwise
+        # the message lands in an asyncio.Queue without waking the loop and
+        # the window only repaints on the next OS event (e.g. alt-tab).
+        loop = self._pg.session.connection.loop
+        loop.call_soon_threadsafe(lambda: [c.update() for c in controls])
+
     def _build(self):
         account_names = list(self.settings.accounts.keys())
 
@@ -222,7 +229,7 @@ class LotFormView(ft.View):
         def load():
             self.excel_status.value = "Загрузка..."
             self.excel_status.color = ft.Colors.GREY_500
-            self._pg.update()
+            self._update(self.excel_status)
 
             self.url_list = load_url_list(self.settings.table_name)
             lots = len(self.url_list)
@@ -233,7 +240,7 @@ class LotFormView(ft.View):
             else:
                 self.excel_status.value = f"Не найдено: {self.settings.table_name}"
                 self.excel_status.color = ft.Colors.RED_400
-            self._pg.update()
+            self._update(self.excel_status)
         threading.Thread(target=load, daemon=True).start()
 
     def _load_last_template(self):
@@ -248,7 +255,7 @@ class LotFormView(ft.View):
                 self._update_url = url
                 self._update_version_text.value = f"Доступно обновление v{latest}"
                 self._update_banner.visible = True
-                self._update_banner.update()
+                self._update(self._update_banner)
         threading.Thread(target=check, daemon=True).start()
 
     def _on_update_click(self, e):
@@ -271,18 +278,18 @@ class LotFormView(ft.View):
                 def on_progress(p):
                     progress_bar.value = p
                     status_text.value = f"Загрузка... {int(p * 100)}%"
-                    self._pg.update()
+                    self._update(progress_bar, status_text)
 
                 download_and_apply(self._update_url, on_progress=on_progress)
                 status_text.value = "Готово! Приложение закроется и перезапустится."
                 progress_bar.value = 1.0
-                self._pg.update()
+                self._update(progress_bar, status_text)
                 import time
                 time.sleep(2)
                 self._pg.window.close()
             except Exception as exc:
                 progress_bar.visible = False
                 status_text.value = f"Ошибка: {exc}"
-                self._pg.update()
+                self._update(progress_bar, status_text)
 
         threading.Thread(target=do_update, daemon=True).start()
