@@ -1,4 +1,4 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 from core.templates import LotData
 from core.settings import AppSettings
 from core.api import make_lot
@@ -25,70 +25,62 @@ def mock_api(return_value):
 
 
 def test_make_lot_calls_list_item():
-    with patch("core.api.MeshokAPI") as MockAPI:
-        MockAPI.return_value = mock_api({"id": 42, "error": 0})
-        result = make_lot(SAMPLE, ["http://img.com/1.jpg"], "token123", SETTINGS)
+    api = mock_api({"id": 42, "error": 0})
+    result = make_lot(SAMPLE, ["http://img.com/1.jpg"], SETTINGS, api)
 
-    MockAPI.assert_called_once_with("token123")
-    MockAPI.return_value.listItem.assert_called_once()
+    api.listItem.assert_called_once()
     assert result == {"id": 42, "error": 0}
 
 
 def test_make_lot_passes_pictures():
-    with patch("core.api.MeshokAPI") as MockAPI:
-        MockAPI.return_value = mock_api({})
-        make_lot(SAMPLE, ["http://img.com/1.jpg", "http://img.com/2.jpg"], "tok", SETTINGS)
+    api = mock_api({})
+    make_lot(SAMPLE, ["http://img.com/1.jpg", "http://img.com/2.jpg"], SETTINGS, api)
 
-    params = MockAPI.return_value.listItem.call_args[0][0]
+    params = api.listItem.call_args[0][0]
     assert params["pictures"] == "http://img.com/1.jpg,http://img.com/2.jpg"
 
 
 def test_make_lot_autoprod_y():
-    with patch("core.api.MeshokAPI") as MockAPI:
-        MockAPI.return_value = mock_api({})
-        make_lot(SAMPLE, [], "tok", SETTINGS)
+    api = mock_api({})
+    make_lot(SAMPLE, [], SETTINGS, api)
 
-    params = MockAPI.return_value.listItem.call_args[0][0]
+    params = api.listItem.call_args[0][0]
     assert params["antisniper"] == "Y"
 
 
 def test_make_lot_autoprod_n():
     data = LotData(**{**SAMPLE.__dict__, "autoprod": "0"})
-    with patch("core.api.MeshokAPI") as MockAPI:
-        MockAPI.return_value = mock_api({})
-        make_lot(data, [], "tok", SETTINGS)
+    api = mock_api({})
+    make_lot(data, [], SETTINGS, api)
 
-    params = MockAPI.return_value.listItem.call_args[0][0]
+    params = api.listItem.call_args[0][0]
     assert params["antisniper"] == "N"
 
 
 def test_make_lot_strips_spaces_from_category_and_price():
     data = LotData(**{**SAMPLE.__dict__, "category": " 99 ", "price": " 50 "})
-    with patch("core.api.MeshokAPI") as MockAPI:
-        MockAPI.return_value = mock_api({})
-        make_lot(data, [], "tok", SETTINGS)
+    api = mock_api({})
+    make_lot(data, [], SETTINGS, api)
 
-    params = MockAPI.return_value.listItem.call_args[0][0]
+    params = api.listItem.call_args[0][0]
     assert params["category"] == "99"
     assert params["startPrice"] == "50"
 
 
 def test_make_lot_tags_strips_spaces_around_commas():
     data = LotData(**{**SAMPLE.__dict__, "tags": "японская еда , конфеты , сладкое"})
-    with patch("core.api.MeshokAPI") as MockAPI:
-        MockAPI.return_value = mock_api({})
-        make_lot(data, [], "tok", SETTINGS)
+    api = mock_api({})
+    make_lot(data, [], SETTINGS, api)
 
-    params = MockAPI.return_value.listItem.call_args[0][0]
+    params = api.listItem.call_args[0][0]
     assert params["tags"] == "японская еда,конфеты,сладкое"
 
 
 def test_make_lot_uses_settings_delivery_prices():
-    with patch("core.api.MeshokAPI") as MockAPI:
-        MockAPI.return_value = mock_api({})
-        make_lot(SAMPLE, [], "tok", SETTINGS)
+    api = mock_api({})
+    make_lot(SAMPLE, [], SETTINGS, api)
 
-    params = MockAPI.return_value.listItem.call_args[0][0]
+    params = api.listItem.call_args[0][0]
     assert params["localDeliveryPrice"] == "100"
     assert params["countryDeliveryPrice"] == "200"
     assert params["worldDeliveryPrice"] == "500"
