@@ -25,6 +25,13 @@ class ProgressView(ft.View):
     def did_mount(self):
         self._pg.run_thread(self._run_posting)
 
+    def _update(self, *controls: ft.Control):
+        # control.update() must run on the page's event loop thread, otherwise
+        # the message lands in an asyncio.Queue without waking the loop and
+        # the window only repaints on the next OS event (e.g. alt-tab).
+        loop = self._pg.session.connection.loop
+        loop.call_soon_threadsafe(lambda: [c.update() for c in controls])
+
     def _build(self):
         self.status_text = ft.Text("Начало работы авто-лота...", size=16, weight=ft.FontWeight.W_500)
         self.progress_bar = ft.ProgressBar(value=0, width=400)
@@ -88,8 +95,7 @@ class ProgressView(ft.View):
             preview = pic_urls[0][:40] + ("..." if len(pic_urls[0]) > 40 else "")
             self.status_text.value = f"Выставляется лот {num} из {total} ({len(pic_urls)} фото)..."
             self.progress_bar.value = (num - 1) / total
-            self.status_text.update()
-            self.progress_bar.update()
+            self._update(self.status_text, self.progress_bar)
 
             try:
                 result = make_lot(current_data, pic_urls, self.settings, api)
@@ -107,8 +113,7 @@ class ProgressView(ft.View):
             log_lines.append(line)
             self.log_text.value = "\n".join(log_lines[-20:])
             self.progress_bar.value = num / total
-            self.log_text.update()
-            self.progress_bar.update()
+            self._update(self.log_text, self.progress_bar)
 
             if num < total and not self._stop:
                 time.sleep(1)
@@ -121,6 +126,4 @@ class ProgressView(ft.View):
 
         self.stop_button.disabled = True
         self.back_button.disabled = False
-        self.status_text.update()
-        self.stop_button.update()
-        self.back_button.update()
+        self._update(self.status_text, self.stop_button, self.back_button)
