@@ -1,5 +1,4 @@
 import time
-import threading
 from datetime import datetime, timedelta
 from typing import Callable
 
@@ -24,7 +23,7 @@ class ProgressView(ft.View):
         self._build()
 
     def did_mount(self):
-        threading.Thread(target=self._run_posting, daemon=True).start()
+        self._pg.run_thread(self._run_posting)
 
     def _build(self):
         self.status_text = ft.Text("Начало работы авто-лота...", size=16, weight=ft.FontWeight.W_500)
