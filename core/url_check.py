@@ -20,10 +20,16 @@ def check_image_url(url: str, timeout: int = 15) -> bool:
     как считать ссылку недоступной.
     """
     for attempt in range(1, MAX_ATTEMPTS + 1):
+        logger.info("Checking URL %s (attempt %d/%d)", url, attempt, MAX_ATTEMPTS)
         try:
             resp = requests.get(url, timeout=timeout, headers={"User-Agent": USER_AGENT}, stream=True)
-            ok = resp.status_code == 200 and resp.headers.get("Content-Type", "").startswith("image/")
+            content_type = resp.headers.get("Content-Type", "")
+            ok = resp.status_code == 200 and content_type.startswith("image/")
             resp.close()
+            if ok:
+                logger.info("URL %s OK (status=%d, content-type=%s)", url, resp.status_code, content_type)
+            else:
+                logger.warning("URL %s not an image (status=%d, content-type=%s)", url, resp.status_code, content_type)
             return ok
         except requests.RequestException as e:
             logger.warning("URL check failed for %s (attempt %d/%d): %s", url, attempt, MAX_ATTEMPTS, e)
@@ -35,10 +41,13 @@ def check_image_url(url: str, timeout: int = 15) -> bool:
 def check_url_list(url_list: list[list[str]]) -> list[str]:
     """Последовательно проверяет все URL из url_list, возвращает список недоступных."""
     all_urls = [url for row in url_list for url in row]
+    logger.info("Starting URL check for %d images", len(all_urls))
     broken = []
-    for i, url in enumerate(all_urls):
-        if i > 0:
+    for i, url in enumerate(all_urls, start=1):
+        if i > 1:
             time.sleep(DELAY_BETWEEN_REQUESTS)
         if not check_image_url(url):
             broken.append(url)
+        logger.info("Checked %d/%d images, %d broken so far", i, len(all_urls), len(broken))
+    logger.info("URL check finished: %d/%d images broken", len(broken), len(all_urls))
     return broken
