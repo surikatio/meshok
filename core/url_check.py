@@ -1,7 +1,6 @@
 """Проверка доступности URL картинок перед публикацией (защита от хотлинк-блокировки)."""
 
 import logging
-from concurrent.futures import ThreadPoolExecutor
 
 import requests
 
@@ -22,11 +21,7 @@ def check_image_url(url: str, timeout: int = 5) -> bool:
         return False
 
 
-def check_url_list(url_list: list[list[str]], max_workers: int = 8) -> list[str]:
-    """Параллельно проверяет все URL из url_list, возвращает список недоступных."""
+def check_url_list(url_list: list[list[str]]) -> list[str]:
+    """Последовательно проверяет все URL из url_list, возвращает список недоступных."""
     all_urls = [url for row in url_list for url in row]
-    if not all_urls:
-        return []
-    with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        results = pool.map(check_image_url, all_urls)
-    return [url for url, ok in zip(all_urls, results) if not ok]
+    return [url for url in all_urls if not check_image_url(url)]
