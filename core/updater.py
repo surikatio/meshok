@@ -6,7 +6,7 @@ import subprocess
 import logging
 import requests
 
-CURRENT_VERSION = "1.0.10"
+CURRENT_VERSION = "1.0.11"
 _GITHUB_API = "https://api.github.com/repos/surikatio/meshok/releases/latest"
 _log = logging.getLogger(__name__)
 
