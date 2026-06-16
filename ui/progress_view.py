@@ -10,6 +10,7 @@ from core.settings import AppSettings
 from core.templates import LotData
 from core.api import make_lot
 from core.meshok_api import MeshokAPI
+from core.excel_loader import save_failed_rows
 
 MAX_ATTEMPTS = 3
 
@@ -92,6 +93,7 @@ class ProgressView(ft.View):
         log_lines: list[str] = []
         ok_count = 0
         err_count = 0
+        failed_rows: list[list[str]] = []
 
         lot_time = datetime.strptime(self.lot_data.date, "%Y-%m-%d %H:%M:%S")
         sleep_sec = int(self.lot_data.sleep_time or "10")
@@ -131,6 +133,7 @@ class ProgressView(ft.View):
 
             if error and error != 0:
                 err_count += 1
+                failed_rows.append(pic_urls)
                 suffix = f" (после {attempt} попыток)" if attempt > 1 else ""
                 line = f"[{num}/{total}] {preview} → ошибка{suffix}: {error}"
             else:
@@ -145,11 +148,23 @@ class ProgressView(ft.View):
             if num < total and not self._stop:
                 time.sleep(1)
 
+        # Не выставленные лоты (ошибки + не дошедшие из-за остановки) → отдельный xlsx
+        not_posted = failed_rows[:]
         if self._stop:
             posted = ok_count + err_count
-            self.status_text.value = f"Остановлено. Выставлено {posted} из {total} ({err_count} ошибок)."
+            remaining = self.url_list[posted:]
+            not_posted.extend(remaining)
+
+        failed_path = save_failed_rows(self.settings.table_name, not_posted)
+        failed_note = f"\nНе выставленные сохранены: {failed_path}" if failed_path else ""
+
+        if self._stop:
+            posted = ok_count + err_count
+            self.status_text.value = (
+                f"Остановлено. Выставлено {posted} из {total} ({err_count} ошибок).{failed_note}"
+            )
         else:
-            self.status_text.value = f"Готово! {ok_count} выставлено, {err_count} ошибок."
+            self.status_text.value = f"Готово! {ok_count} выставлено, {err_count} ошибок.{failed_note}"
 
         self.stop_button.disabled = True
         self.back_button.disabled = False
