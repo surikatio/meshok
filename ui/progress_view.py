@@ -125,8 +125,14 @@ class ProgressView(ft.View):
 
                 if not error or error == 0:
                     break
-                # повтор только при временной ошибке загрузки картинки
-                if "Картинка" not in str(error) or attempt >= MAX_ATTEMPTS:
+                err_str = str(error)
+                # повтор при "предыдущего запроса" — meshok ещё обрабатывает прошлый лот
+                if "предыдущего" in err_str and attempt < MAX_ATTEMPTS:
+                    attempt += 1
+                    time.sleep(30)
+                    continue
+                # повтор при временной ошибке загрузки картинки
+                if "Картинка" not in err_str or attempt >= MAX_ATTEMPTS:
                     break
                 attempt += 1
                 time.sleep(2)

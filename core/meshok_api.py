@@ -15,7 +15,7 @@ class MeshokAPI:
     def sendRequest(self, method, params={}):
         """POST на {baseUrl}{method} с переданными params, возвращает разобранный JSON-ответ."""
         url = self.baseUrl + method
-        response = self.session.post(url, data=params, timeout=10)
+        response = self.session.post(url, data=params, timeout=60)
         return response.json()
 
     def getItemList(self):
