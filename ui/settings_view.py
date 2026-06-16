@@ -1,5 +1,6 @@
 """Экран настроек: аккаунты, файл с картинками и цены доставки."""
 
+import os
 from typing import Callable
 import flet as ft
 from core.settings import AppSettings, save_settings
@@ -32,12 +33,14 @@ class SettingsView(ft.View):
         ])
 
         # --- Excel file ---
+        # _table_path хранит полный путь (если выбран через проводник), иначе ""
+        self._table_path: str = self.settings.table_name if os.path.isabs(self.settings.table_name) else ""
         self._f_table = ft.TextField(
-            label="Файл с картинками (Excel, путь или имя файла)",
-            value=self.settings.table_name,
+            label="Файл с картинками (Excel, имя файла или полный путь)",
+            value=os.path.basename(self.settings.table_name) if self.settings.table_name else "",
             expand=True,
+            on_change=lambda _: setattr(self, "_table_path", ""),
         )
-
         # --- Delivery ---
         self._f_prolong = ft.TextField(label="Продлений при неудаче", value=self.settings.prolong, width=200)
         self._f_local = ft.TextField(label="Доставка по городу (₽)", value=self.settings.local_delivery_price, width=200)
@@ -46,7 +49,7 @@ class SettingsView(ft.View):
 
         self.controls = [
             ft.Row([
-                ft.IconButton(ft.Icons.ARROW_BACK, tooltip="Назад", on_click=lambda e: self._save_and_back()),
+                ft.IconButton(ft.Icons.ARROW_BACK, tooltip="Назад", on_click=lambda _: self._save_and_back()),
                 ft.Text("Настройки", size=20, weight=ft.FontWeight.BOLD),
             ]),
             ft.Divider(),
@@ -55,19 +58,38 @@ class SettingsView(ft.View):
             add_row,
             ft.Divider(),
             ft.Text("Файл с картинками", weight=ft.FontWeight.W_600, size=15),
-            self._f_table,
+            ft.Row([
+                self._f_table,
+                ft.IconButton(
+                    ft.Icons.FOLDER_OPEN,
+                    tooltip="Выбрать файл",
+                    on_click=self._open_file_dialog,
+                ),
+            ]),
             ft.Divider(),
             ft.Text("Доставка", weight=ft.FontWeight.W_600, size=15),
             ft.Row([self._f_prolong, self._f_local]),
             ft.Row([self._f_country, self._f_world]),
             ft.Divider(height=16),
-            ft.ElevatedButton("Сохранить", icon=ft.Icons.SAVE, on_click=lambda e: self._save_and_back()),
+            ft.ElevatedButton("Сохранить", icon=ft.Icons.SAVE, on_click=lambda _: self._save_and_back()),
         ]
+
+    async def _open_file_dialog(self, _):
+        picker = ft.FilePicker()
+        files = await picker.pick_files(
+            file_type=ft.FilePickerFileType.CUSTOM,
+            allowed_extensions=["xlsx", "xls"],
+            dialog_title="Выберите файл с картинками",
+        )
+        if files and files[0].path:
+            self._table_path = files[0].path
+            self._f_table.value = os.path.basename(files[0].path)
+            self._pg.update()
 
     def _refresh_acc_list(self):
         """Перестраивает список аккаунтов (имя + маскированный токен + кнопка удаления)."""
         def make_delete(name):
-            def handler(e):
+            def handler(_):
                 self.settings.accounts.pop(name, None)
                 self._refresh_acc_list()
                 self._pg.update()
@@ -82,7 +104,7 @@ class SettingsView(ft.View):
             for name in self.settings.accounts
         ]
 
-    def _add_account(self, e):
+    def _add_account(self, _):
         """Добавляет аккаунт (имя → токен) из полей формы в settings.accounts."""
         name = (self._acc_name.value or "").strip()
         token = (self._acc_token.value or "").strip()
@@ -96,7 +118,7 @@ class SettingsView(ft.View):
 
     def _save_and_back(self):
         """Сохраняет поля настроек в settings.json и возвращается на главный экран."""
-        self.settings.table_name = (self._f_table.value or "").strip()
+        self.settings.table_name = self._table_path or (self._f_table.value or "").strip()
         self.settings.prolong = (self._f_prolong.value or "0").strip()
         self.settings.local_delivery_price = (self._f_local.value or "0").strip()
         self.settings.country_delivery_price = (self._f_country.value or "0").strip()

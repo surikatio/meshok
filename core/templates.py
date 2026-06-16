@@ -86,6 +86,15 @@ def delete_template(name: str) -> None:
     os.remove(path)
 
 
+def rename_template(old_name: str, new_name: str) -> None:
+    """Переименовывает шаблон. Бросает FileExistsError, если новое имя уже занято."""
+    old_path = os.path.join(TEMPLATES_DIR, f"{old_name}.txt")
+    new_path = os.path.join(TEMPLATES_DIR, f"{new_name}.txt")
+    if os.path.exists(new_path):
+        raise FileExistsError(f"Template '{new_name}' already exists")
+    os.rename(old_path, new_path)
+
+
 def save_last(data: LotData) -> None:
     """Перезаписывает "шаблоны/last.txt" — данные подставляются по умолчанию при следующем запуске."""
     path = os.path.join(TEMPLATES_DIR, "last.txt")

@@ -9,8 +9,8 @@ from typing import Callable
 from core.excel_loader import load_url_list
 from core.url_check import check_url_list
 from core.settings import AppSettings
-from core.templates import LotData, list_templates, load_template, delete_template, save_last
-from core.history import save_history
+from core.templates import LotData, list_templates, load_template, delete_template, rename_template, save_last
+from core.history import save_history, list_history, load_history_entry, delete_history_entry
 from core.validator import validate_lot_data
 from core.updater import check_for_update, download_and_apply
 from ui.template_dialog import show_save_template_dialog
@@ -90,19 +90,8 @@ class LotFormView(ft.View):
             visible=False,
         )
 
-        def paste_to(field: ft.TextField):
-            def handler(e):
-                clip = self._pg.get_clipboard()
-                if clip:
-                    field.value = (field.value or "") + clip
-                    self._pg.update()
-            return handler
-
         def row(field):
-            return ft.Row([
-                field,
-                ft.IconButton(ft.Icons.CONTENT_PASTE, tooltip="Вставить", on_click=paste_to(field)),
-            ])
+            return field
 
         self.controls = [
             ft.Row([
@@ -127,53 +116,161 @@ class LotFormView(ft.View):
             self.f_longevity,
             self.f_account,
             self.f_autoprod,
-            ft.ElevatedButton("Запустить", on_click=self._on_run, icon=ft.Icons.PLAY_ARROW),
+            ft.Row([
+                ft.OutlinedButton("Сохранить шаблон", icon=ft.Icons.BOOKMARK_ADD_OUTLINED, on_click=self._on_save_template),
+                ft.ElevatedButton("Запустить", on_click=self._on_run, icon=ft.Icons.PLAY_ARROW),
+            ]),
         ]
         self.scroll = ft.ScrollMode.AUTO
         self.padding = 16
 
     def _build_menu_bar(self) -> ft.Control:
-        """Строит выпадающее меню "Шаблоны" с пунктами сохранения, открытия и удаления."""
-        def open_template(name):
-            def handler(e):
-                data = load_template(name)
-                if data:
-                    self._fill_form(data)
-            return handler
-
-        def del_template(name):
-            def handler(e):
-                delete_template(name)
-                self._refresh_menu()
-            return handler
-
-        templates = list_templates()
-        open_items = [ft.PopupMenuItem(content=n, on_click=open_template(n)) for n in templates if n != "last"]
-        del_items = [ft.PopupMenuItem(content=n, on_click=del_template(n)) for n in templates if n != "last"]
-
-        self.menu_button = ft.PopupMenuButton(
-            content=ft.Row([ft.Icon(ft.Icons.FOLDER_OPEN), ft.Text("Шаблоны")]),
-            items=[
-                ft.PopupMenuItem(content="Сохранить шаблон", on_click=self._on_save_template),
-                ft.PopupMenuItem(),
-                *([ft.PopupMenuItem(content="— Открыть —", disabled=True)] + open_items if open_items else []),
-                ft.PopupMenuItem(),
-                *([ft.PopupMenuItem(content="— Удалить —", disabled=True)] + del_items if del_items else []),
-            ],
+        """Кнопка «Шаблоны» — открывает диалог управления шаблонами."""
+        return ft.TextButton(
+            content=ft.Row([ft.Icon(ft.Icons.FOLDER_OPEN, size=18), ft.Text("Шаблоны")], tight=True),
+            on_click=self._show_templates_dialog,
         )
-        return self.menu_button
 
-    def _refresh_menu(self):
-        """Перестраивает строку меню после сохранения/удаления шаблона."""
-        self.controls[0] = ft.Row([
-            self._build_menu_bar(),
-            ft.Row(
-                [ft.IconButton(ft.Icons.SETTINGS, tooltip="Настройки", on_click=self._open_settings)],
-                alignment=ft.MainAxisAlignment.END,
+    def _show_templates_dialog(self, _=None):
+        """Диалог с вкладками «Шаблоны» и «История»."""
+
+        # ── вкладка «Шаблоны» ──────────────────────────────────────────────
+        tpl_col = ft.Column(scroll=ft.ScrollMode.AUTO, height=300, spacing=0)
+
+        def build_templates():
+            names = [t for t in list_templates() if t != "last"]
+            if names:
+                tpl_col.controls = [_tpl_row(n) for n in names]
+            else:
+                tpl_col.controls = [_empty("Нет сохранённых шаблонов")]
+
+        def _tpl_row(name: str) -> ft.Row:
+            return ft.Row([
+                ft.Text(name, expand=True),
+                ft.IconButton(ft.Icons.OPEN_IN_NEW, tooltip="Открыть", icon_size=18,
+                              on_click=lambda _, n=name: tpl_open(n)),
+                ft.IconButton(ft.Icons.EDIT_OUTLINED, tooltip="Переименовать", icon_size=18,
+                              on_click=lambda _, n=name: tpl_start_rename(n)),
+                ft.IconButton(ft.Icons.DELETE_OUTLINE, tooltip="Удалить", icon_size=18,
+                              on_click=lambda _, n=name: tpl_delete(n)),
+            ], vertical_alignment=ft.CrossAxisAlignment.CENTER)
+
+        def _tpl_rename_row(name: str) -> ft.Row:
+            field = ft.TextField(value=name, expand=True, dense=True, autofocus=True,
+                                 content_padding=ft.Padding(left=8, right=8, top=4, bottom=4))
+
+            def confirm(_):
+                new_name = (field.value or "").strip()
+                if new_name and new_name != name:
+                    try:
+                        rename_template(name, new_name)
+                    except FileExistsError:
+                        field.error = f"«{new_name}» уже существует"
+                        self._pg.update()
+                        return
+                build_templates()
+                self._pg.update()
+
+            def cancel(_):
+                build_templates()
+                self._pg.update()
+
+            return ft.Row([
+                field,
+                ft.IconButton(ft.Icons.CHECK, tooltip="Сохранить", icon_size=18, on_click=confirm),
+                ft.IconButton(ft.Icons.CLOSE, tooltip="Отмена", icon_size=18, on_click=cancel),
+            ], vertical_alignment=ft.CrossAxisAlignment.CENTER)
+
+        def tpl_open(name: str):
+            data = load_template(name)
+            if data:
+                self._fill_form(data)
+            dialog.open = False
+            self._pg.update()
+
+        def tpl_delete(name: str):
+            delete_template(name)
+            build_templates()
+            self._pg.update()
+
+        def tpl_start_rename(name: str):
+            names = [t for t in list_templates() if t != "last"]
+            if name in names:
+                tpl_col.controls[names.index(name)] = _tpl_rename_row(name)
+                self._pg.update()
+
+        # ── вкладка «История» ──────────────────────────────────────────────
+        hist_col = ft.Column(scroll=ft.ScrollMode.AUTO, height=300, spacing=0)
+
+        def build_history():
+            names = list_history()
+            if names:
+                hist_col.controls = [_hist_row(n) for n in names]
+            else:
+                hist_col.controls = [_empty("История пуста")]
+
+        def _hist_row(name: str) -> ft.Row:
+            return ft.Row([
+                ft.Text(name, expand=True, size=13),
+                ft.IconButton(ft.Icons.OPEN_IN_NEW, tooltip="Загрузить в форму", icon_size=18,
+                              on_click=lambda _, n=name: hist_open(n)),
+                ft.IconButton(ft.Icons.DELETE_OUTLINE, tooltip="Удалить", icon_size=18,
+                              on_click=lambda _, n=name: hist_delete(n)),
+            ], vertical_alignment=ft.CrossAxisAlignment.CENTER)
+
+        def hist_open(name: str):
+            data = load_history_entry(name)
+            if data:
+                self._fill_form(data)
+            dialog.open = False
+            self._pg.update()
+
+        def hist_delete(name: str):
+            delete_history_entry(name)
+            build_history()
+            self._pg.update()
+
+        # ── вспомогательные ────────────────────────────────────────────────
+        def _empty(text: str) -> ft.Container:
+            return ft.Container(
+                ft.Text(text, color=ft.Colors.GREY_500),
+                padding=ft.Padding(top=12, bottom=12, left=0, right=0),
+            )
+
+        build_templates()
+        build_history()
+
+        tabs = ft.Tabs(
+            length=2,
+            expand=True,
+            content=ft.Column(
                 expand=True,
+                controls=[
+                    ft.TabBar(tabs=[ft.Tab(label="Шаблоны"), ft.Tab(label="История")]),
+                    ft.TabBarView(
+                        expand=True,
+                        controls=[
+                            ft.Container(tpl_col, padding=ft.Padding(top=8, bottom=0, left=0, right=0)),
+                            ft.Container(hist_col, padding=ft.Padding(top=8, bottom=0, left=0, right=0)),
+                        ],
+                    ),
+                ],
             ),
-        ])
-        # controls[1] — excel status row, остаётся без изменений
+        )
+
+        dialog = ft.AlertDialog(
+            title=ft.Text("Шаблоны и история"),
+            content=ft.Container(content=tabs, width=420, height=360),
+            actions=[ft.TextButton("Закрыть", on_click=lambda _: _close())],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+
+        def _close():
+            dialog.open = False
+            self._pg.update()
+
+        self._pg.overlay.append(dialog)
+        dialog.open = True
         self._pg.update()
 
     def _fill_form(self, data: LotData, update: bool = True):
@@ -238,9 +335,9 @@ class LotFormView(ft.View):
             self._pg.overlay[-1].open = False
             self._pg.update()
 
-    def _on_save_template(self, e):
+    def _on_save_template(self, _=None):
         data = self._collect_data()
-        show_save_template_dialog(self._pg, data, on_saved=lambda name: self._refresh_menu())
+        show_save_template_dialog(self._pg, data, on_saved=lambda _name: None)
 
     def _open_settings(self, e):
         self.navigate("settings", settings=self.settings)
@@ -341,7 +438,9 @@ class LotFormView(ft.View):
                 self._update(progress_bar, status_text)
                 import time
                 time.sleep(2)
-                self._pg.window.close()
+                import asyncio
+                loop = self._pg.session.connection.loop
+                asyncio.run_coroutine_threadsafe(self._pg.window.close(), loop)
                 # window.close() не всегда завершает процесс (PyInstaller onefile),
                 # из-за чего bat-скрипт обновления зависает в ожидании выхода процесса
                 time.sleep(0.5)
